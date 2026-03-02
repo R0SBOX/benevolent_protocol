@@ -17,15 +17,18 @@ class SystemProfile:
     # Hardware
     cpu_cores: int
     cpu_usage: float
+    cpu_model: str  # Added for orchestrator compatibility
     total_memory: int  # bytes
     available_memory: int  # bytes
     memory_usage: float  # percentage
+    memory_total_gb: float  # Added for orchestrator compatibility
     total_disk: int  # bytes
     free_disk: int  # bytes
     disk_usage: float  # percentage
 
     # Software
     os_name: str
+    os_type: str  # Added for orchestrator compatibility (alias for os_name)
     os_version: str
     kernel_version: str
     hostname: str
@@ -53,24 +56,46 @@ class SystemProfiler:
     def __init__(self):
         self.last_profile: SystemProfile = None
 
+    async def profile(self) -> SystemProfile:
+        """
+        Async wrapper for profile_system.
+        Compatible with await calls from orchestrator.
+        """
+        return self.profile_system()
+
     def profile_system(self) -> SystemProfile:
         """
         Generate complete system profile.
         Returns detailed analysis of current device state.
         """
+        # Get CPU model
+        try:
+            cpu_model = platform.processor() or "Unknown CPU"
+        except:
+            cpu_model = "Unknown CPU"
+        
+        # Get disk path (Windows uses C:\, Linux uses /)
+        disk_path = 'C:\\' if platform.system() == 'Windows' else '/'
+        
+        # Get memory info
+        mem = psutil.virtual_memory()
+        
         profile = SystemProfile(
             # Hardware metrics
             cpu_cores=psutil.cpu_count(),
             cpu_usage=psutil.cpu_percent(interval=1),
-            total_memory=psutil.virtual_memory().total,
-            available_memory=psutil.virtual_memory().available,
-            memory_usage=psutil.virtual_memory().percent,
-            total_disk=psutil.disk_usage('/').total,
-            free_disk=psutil.disk_usage('/').free,
-            disk_usage=psutil.disk_usage('/').percent,
+            cpu_model=cpu_model,
+            total_memory=mem.total,
+            available_memory=mem.available,
+            memory_usage=mem.percent,
+            memory_total_gb=round(mem.total / (1024**3), 1),
+            total_disk=psutil.disk_usage(disk_path).total,
+            free_disk=psutil.disk_usage(disk_path).free,
+            disk_usage=psutil.disk_usage(disk_path).percent,
 
             # Software info
             os_name=platform.system(),
+            os_type=platform.system(),
             os_version=platform.release(),
             kernel_version=platform.version(),
             hostname=platform.node(),
@@ -86,22 +111,32 @@ class SystemProfiler:
 
             # Metadata
             profile_timestamp=datetime.now().isoformat(),
-            protocol_version="0.1.0-alpha"
+            protocol_version="0.3.0-alpha"
         )
 
         self.last_profile = profile
         return profile
 
     def _check_firewall(self) -> bool:
-        """Check if firewall is active"""
+        """Check if firewall is active (cross-platform)"""
         try:
-            # Linux: Check iptables/ufw
-            result = subprocess.run(
-                ['iptables', '-L'],
-                capture_output=True,
-                timeout=5
-            )
-            return result.returncode == 0 and len(result.stdout) > 100
+            if platform.system() == 'Windows':
+                # Windows: Check Windows Firewall status
+                result = subprocess.run(
+                    ['netsh', 'advfirewall', 'show', 'allprofiles', 'state'],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                return 'ON' in result.stdout
+            else:
+                # Linux: Check iptables/ufw
+                result = subprocess.run(
+                    ['iptables', '-L'],
+                    capture_output=True,
+                    timeout=5
+                )
+                return result.returncode == 0 and len(result.stdout) > 100
         except:
             # Fallback: Assume firewall inactive
             return False
