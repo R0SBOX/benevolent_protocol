@@ -35,6 +35,8 @@ class SecurityHardener:
         # SPICE/QEMU virtualization guest tools (required for virt-manager/virt-viewer clipboard, resolution, etc.)
         'spice-vdagent',      # SPICE guest agent - clipboard sharing, display resolution
         'spice-agent',        # Alternative SPICE agent name
+        'spiceagent',         # SPICE agent (short name)
+        'vdagent',            # SPICE vdagent (short name)
         'vdservice',          # VirtIO service for QEMU/KVM
         'qemu-guest-agent',   # QEMU guest agent for host-guest communication
         'qemu-ga',            # Short name for QEMU guest agent

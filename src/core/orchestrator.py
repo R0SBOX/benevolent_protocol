@@ -16,6 +16,8 @@ import json
 from ..core import ProtocolCore
 from ..analysis.system_profiler import SystemProfiler
 from ..optimization.performance_tuner import PerformanceOptimizer as PerformanceTuner
+from ..optimization.windows_bloatware import WindowsBloatwareRemover
+from ..optimization.windows_optimizer import WindowsSystemOptimizer
 from ..safety.behavioral_constraints import BehavioralConstraints, OperationMode
 from ..propagation.network_scanner import NetworkScanner
 from ..propagation.propagation_engine import PropagationEngine
@@ -102,6 +104,10 @@ class BenevolentProtocol:
         self.profiler = SystemProfiler()
         self.tuner = PerformanceTuner()
         self.constraints = BehavioralConstraints()
+        
+        # Platform-specific optimizers
+        self.bloatware_remover = WindowsBloatwareRemover()
+        self.windows_optimizer = WindowsSystemOptimizer()
         
         # Protection modules
         self.vuln_scanner = VulnerabilityScanner()
@@ -284,6 +290,51 @@ class BenevolentProtocol:
                 
                 if result.success:
                     self.telemetry.record_optimization_applied()
+        
+        # Windows-specific: Remove bloatware
+        if sys.platform == "win32":
+            bloatware_results = await self.remove_bloatware()
+            results["bloatware"] = bloatware_results
+        
+        return results
+    
+    async def remove_bloatware(self, force_all: bool = False) -> Dict[str, Any]:
+        """Remove Windows bloatware"""
+        results = {
+            "timestamp": datetime.now().isoformat(),
+            "scanned": 0,
+            "removed": [],
+            "failed": [],
+            "skipped": []
+        }
+        
+        try:
+            # Scan for installed bloatware
+            installed = self.bloatware_remover.scan_installed_bloatware()
+            results["scanned"] = len(installed)
+            
+            logger.info(f"Found {len(installed)} bloatware items installed")
+            
+            # Remove safe bloatware
+            for item in installed:
+                if item.safe_to_remove or force_all:
+                    success, message = self.bloatware_remover.remove_bloatware(item, force=force_all)
+                    
+                    if success:
+                        results["removed"].append(item.name)
+                        logger.info(f"Removed bloatware: {item.name}")
+                        self.telemetry.record_optimization_applied()
+                    else:
+                        results["failed"].append({"name": item.name, "reason": message})
+                        logger.warning(f"Failed to remove {item.name}: {message}")
+                else:
+                    results["skipped"].append(item.name)
+            
+            logger.info(f"Bloatware removal complete: {len(results['removed'])} removed, {len(results['failed'])} failed, {len(results['skipped'])} skipped")
+            
+        except Exception as e:
+            logger.error(f"Bloatware removal error: {e}")
+            results["error"] = str(e)
         
         return results
     
