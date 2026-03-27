@@ -30,6 +30,32 @@ class SecurityHardener:
     All changes are logged and reversible where possible.
     """
 
+    # Services that should NEVER be disabled - critical VM guest tools and system components
+    PROTECTED_SERVICES = {
+        # SPICE/QEMU virtualization guest tools (required for virt-manager/virt-viewer clipboard, resolution, etc.)
+        'spice-vdagent',      # SPICE guest agent - clipboard sharing, display resolution
+        'spice-agent',        # Alternative SPICE agent name
+        'vdservice',          # VirtIO service for QEMU/KVM
+        'qemu-guest-agent',   # QEMU guest agent for host-guest communication
+        'qemu-ga',            # Short name for QEMU guest agent
+        # VMware guest tools
+        'vmtoolsd',           # VMware Tools service
+        'vmware-tools',       # VMware Tools
+        # VirtualBox guest tools
+        'vboxservice',        # VirtualBox guest service
+        'vboxadd-service',    # VirtualBox guest additions service
+        # Hyper-V guest tools
+        'vmicheartbeat',      # Hyper-V heartbeat
+        'vmickvpexchange',    # Hyper-V key-value pair exchange
+        'vmicrdv',            # Hyper-V remote desktop virtualization
+        'vmicshutdown',       # Hyper-V shutdown
+        'vmictimesync',       # Hyper-V time synchronization
+        'vmicvss',            # Hyper-V volume shadow copy
+        # Xen guest tools
+        'xenagent',           # Xen guest agent
+        'xenstore',           # Xen store
+    }
+
     def __init__(self):
         self.platform = platform.system().lower()
         self.applied_hardening: List[HardeningResult] = []
@@ -589,6 +615,17 @@ class SecurityHardener:
     def _disable_windows_service(self, vuln: Vulnerability) -> HardeningResult:
         """Disable insecure Windows service"""
         service_name = vuln.affected_component
+
+        # Check if service is in protected list (VM guest tools, etc.)
+        if service_name.lower() in {s.lower() for s in self.PROTECTED_SERVICES}:
+            return HardeningResult(
+                vulnerability_id=vuln.id,
+                action="disable_service",
+                success=False,
+                message=f"Skipping {service_name}: protected service (VM guest tool or critical system component)",
+                requires_restart=False,
+                rollback_command=None
+            )
 
         try:
             result = subprocess.run(
