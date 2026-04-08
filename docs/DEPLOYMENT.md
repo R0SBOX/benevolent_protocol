@@ -1,5 +1,7 @@
 # Deployment Guide - THE BENEVOLENT PROTOCOL
 
+> Status note: this document describes deployment-oriented intent, but the repository is not currently represented as production-ready. Use it as a prototype/operator guide, not as a statement of verified end-to-end readiness.
+
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
@@ -63,7 +65,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-### Option 2: From PyPI (Future)
+### Option 2: From PyPI (Future / not currently represented in repo)
 
 ```bash
 pip install benevolent-protocol
@@ -85,7 +87,7 @@ Or one-liner:
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; Invoke-WebRequest -Uri "https://r0s.org/benevolent-protocol-install.ps1" -OutFile "install.ps1"; .\install.ps1
 ```
 
-### Option 4: Docker
+### Option 4: Docker (Future / image not verified here)
 
 ```bash
 docker pull r0sorg/benevolent-protocol:latest
@@ -97,12 +99,10 @@ docker pull r0sorg/benevolent-protocol:latest
 
 ### Configuration File Location
 
-The protocol looks for configuration in this order:
+The current orchestrator code directly defaults to `/etc/benevolent_protocol/config.json` unless a path is passed into the constructor. The wider search order below is aspirational unless implemented by a wrapper script:
 
-1. `--config /path/to/config.json` (command line)
-2. `BENEVOLENT_PROTOCOL_CONFIG` environment variable
-3. `/etc/benevolent_protocol/config.json`
-4. `./config/config.json` (relative to working directory)
+1. constructor-provided config path
+2. `/etc/benevolent_protocol/config.json`
 
 ### Creating Configuration
 
@@ -179,35 +179,25 @@ Telemetry levels:
 # Activate virtual environment
 source venv/bin/activate
 
-# Run with default config
+# Run legacy core scaffold
 python -m src.core
 
-# Run with specific config
-python -m src.core --config /path/to/config.json
-
-# Run with debug logging
-LOG_LEVEL=DEBUG python -m src.core
+# Run newer orchestrator module
+python -m src.core.orchestrator
 ```
 
-### Production Mode
+### Prototype Runtime
 
 ```bash
-# Direct execution
-benevolent-protocol --config /etc/benevolent_protocol/config.json
-
-# Or via Python
-python3 -m src.core.orchestrator --config /etc/benevolent_protocol/config.json
+# Current code does not expose a verified CLI parser for these flags.
+# Invoke the module directly or construct BenevolentProtocol from Python.
+python3 -m src.core.orchestrator
 ```
 
 ### Command Line Options
 
 ```
-Usage: benevolent-protocol [OPTIONS]
-
-Options:
-  --config PATH         Path to configuration file
-  --version            Show version and exit
-  --help               Show this message and exit
+No verified command-line interface is currently documented by the code itself.
 ```
 
 ---

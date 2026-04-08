@@ -1,93 +1,97 @@
 # THE BENEVOLENT PROTOCOL - Project Structure
 
 ## Overview
-A framework for ensuring beneficial AI/human interactions through ethical guidelines, safety protocols, and trust-building mechanisms.
+
+This document describes the repository as it exists now. Earlier versions of this file referred to a different "white paper" driven structure that does not match the current codebase.
 
 ## Directory Structure
 
-```
+```text
 benevolent_protocol/
-├── docs/                    # Documentation
-│   ├── WHITEPAPER.md       # Full protocol specification
-│   ├── ARCHITECTURE.md     # System architecture
-│   ├── IMPLEMENTATION.md   # Implementation guides
-│   └── TESTING.md          # Testing protocols
-├── src/                     # Source code
-│   ├── core/               # Core protocol logic
-│   ├── safety/             # Safety mechanisms
-│   ├── ethics/             # Ethical evaluation
-│   └── trust/              # Trust building components
-├── tests/                   # Test suites
-│   ├── unit/               # Unit tests
-│   ├── integration/        # Integration tests
-│   └── safety/             # Safety validation tests
-├── config/                  # Configuration files
-│   ├── protocol.yaml       # Protocol parameters
-│   ├── safety.yaml         # Safety thresholds
-│   └── ethics.yaml         # Ethical guidelines
-└── implementations/         # Reference implementations
-    ├── python/             # Python implementation
-    ├── javascript/         # JavaScript implementation
-    └── rust/               # Rust implementation
+├── config/
+│   ├── config.json
+│   └── config.schema.json
+├── deploy/
+│   ├── benevolent-protocol.service
+│   ├── bootstrap.ps1
+│   ├── install.bat
+│   ├── install.ps1
+│   ├── install-standalone.ps1
+│   └── install.sh
+├── docs/
+│   ├── ANDROID_GUIDE.md
+│   ├── ARCHITECTURE.md
+│   ├── CONCEPT.md
+│   ├── DEPLOYMENT.md
+│   ├── MODE_DIAGRAM.md
+│   ├── PLATFORM_STRATEGY.md
+│   ├── PROJECT_STRUCTURE.md
+│   ├── PROPAGATION_GUIDE.md
+│   └── WINDOWS_GUIDE.md
+├── src/
+│   ├── analysis/
+│   │   └── system_profiler.py
+│   ├── control/
+│   │   ├── command_receiver.py
+│   │   ├── heartbeat_manager.py
+│   │   ├── kill_switch.py
+│   │   ├── telemetry_sender.py
+│   │   └── update_receiver.py
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── orchestrator.py
+│   │   └── README.md
+│   ├── optimization/
+│   │   ├── performance_tuner.py
+│   │   ├── windows_bloatware.py
+│   │   └── windows_optimizer.py
+│   ├── propagation/
+│   │   ├── network_scanner.py
+│   │   ├── propagation_engine.py
+│   │   └── stealth_operations.py
+│   ├── protection/
+│   │   ├── malware_remover.py
+│   │   ├── malware_scanner.py
+│   │   ├── security_hardener.py
+│   │   └── vulnerability_scanner.py
+│   └── safety/
+│       └── behavioral_constraints.py
+├── tests/
+│   ├── test_control.py
+│   └── test_integration.py
+├── README.md
+├── STATUS.md
+├── BUILD_REPORT.md
+├── requirements.txt
+└── top-level exploratory test scripts
 ```
 
-## Core Components (Anticipated)
+## Functional Areas
 
-### 1. Safety Layer
-- Risk assessment mechanisms
-- Impact evaluation systems
-- Harm prevention protocols
-- Emergency shutdown procedures
+### `src/core`
+- Contains the legacy `ProtocolCore` implementation and the newer orchestrator.
+- This is the main place where lifecycle integration is intended to happen.
 
-### 2. Ethics Engine
-- Value alignment verification
-- Moral reasoning capabilities
-- Ethical decision frameworks
-- Bias detection and mitigation
+### `src/analysis`
+- Contains host profiling logic.
 
-### 3. Trust Builder
-- Transparency mechanisms
-- Accountability systems
-- Verification protocols
-- Reputation management
+### `src/optimization`
+- Contains performance and Windows-focused optimization modules.
 
-### 4. Communication Protocol
-- Clear explanation systems
-- Consent mechanisms
-- Feedback loops
-- Conflict resolution
+### `src/safety`
+- Contains the behavioral constraints and mode/resource logic.
 
-## Implementation Phases
+### `src/protection`
+- Contains vulnerability scanning, malware scanning/removal, and security hardening modules.
 
-### Phase 1: Foundation
-- [ ] Extract and analyze white paper content
-- [ ] Define core protocol specifications
-- [ ] Design system architecture
-- [ ] Create initial documentation
+### `src/propagation`
+- Contains network scanning, propagation, and stealth-related modules.
 
-### Phase 2: Core Development
-- [ ] Implement safety layer
-- [ ] Develop ethics engine
-- [ ] Build trust mechanisms
-- [ ] Create communication protocols
+### `src/control`
+- Contains kill switch, command receiver, telemetry, heartbeat, and update modules.
 
-### Phase 3: Testing & Validation
-- [ ] Develop comprehensive test suites
-- [ ] Conduct safety validation
-- [ ] Perform ethical impact assessment
-- [ ] Execute trust verification
+## Notes
 
-### Phase 4: Integration
-- [ ] Create reference implementations
-- [ ] Build integration guides
-- [ ] Develop deployment protocols
-- [ ] Establish monitoring systems
-
-## Waiting For
-
-**Critical:** Access to encrypted white paper content
-**Required:** Password or alternative document source
-
----
-
-*Ready to build THE BENEVOLENT PROTOCOL upon content access.*
+- The repository includes both planning-era documents and implementation-era documents.
+- Where docs disagree with code, treat the source tree as canonical.
+- The current structure does not include the earlier `ethics/`, `trust/`, `implementations/`, or white-paper-specific layout that older docs described.

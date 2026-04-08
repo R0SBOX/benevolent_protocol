@@ -30,6 +30,8 @@ env/
 # IDE
 .vscode/
 .idea/
+.codex
+.codex/
 *.swp
 *.swo
 *~

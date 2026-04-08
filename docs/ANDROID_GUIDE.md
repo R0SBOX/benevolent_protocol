@@ -1,6 +1,8 @@
 # Android Support Guide - THE BENEVOLENT PROTOCOL
 
-Complete guide for Android device optimization and propagation.
+Design guide for Android device optimization and propagation.
+
+> Status note: this document currently describes intended Android support. The repository does not presently include `src/optimization/android_optimizer.py` or `test_android.py`, so treat the workflows below as planned rather than executable.
 
 ---
 
@@ -326,18 +328,21 @@ Settings → Developer Options → USB Debugging → Enable
 
 **Scan Device:**
 ```bash
-python src/optimization/android_optimizer.py
+# Planned entry point, not currently present in this repository:
+# python src/optimization/android_optimizer.py
 ```
 
 **Test Features:**
 ```bash
-python test_android.py
+# Planned test file, not currently present in this repository:
+# python test_android.py
 ```
 
 ### Python API
 
 ```python
-from src.optimization.android_optimizer import AndroidOptimizer
+# Planned API example; module not currently present in this repository.
+# from src.optimization.android_optimizer import AndroidOptimizer
 
 # Create optimizer
 optimizer = AndroidOptimizer()

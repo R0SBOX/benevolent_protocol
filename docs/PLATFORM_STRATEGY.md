@@ -1,482 +1,221 @@
 # Platform Strategy - THE BENEVOLENT PROTOCOL
 
-## 🎯 Target Audience Analysis
+> Status note: this document reflects the current repository strategy as represented by code and adjacent docs. It distinguishes between implemented policy, partial implementation, and design intent.
 
-### Linux Users: **LEAVE ALONE**
-- They know what they're doing
-- Already optimize their own systems
-- Don't need hand-holding
-- Would probably *detect and remove* the protocol anyway
-- **Strategy:** Complete opt-out, maybe even explicit "don't infect Linux" flag
+## Overview
 
-### Windows Users: **PRIMARY TARGET**
-- Generally less technical
-- Systems accumulate bloatware
-- Security often neglected
-- Updates frequently ignored
-- **Strategy:** Active optimization and protection
+The repository currently expresses platform strategy in three places:
+- `src/safety/behavioral_constraints.py`
+- Windows-focused modules in `src/optimization/`
+- design-oriented platform docs, especially for Android
 
-### macOS Users: **SECONDARY TARGET**
-- Somewhat technical but...
-- Apple restricts system access
-- Could benefit from optimization
-- **Strategy:** Limited optimization within Apple's constraints
+The actual strategy is therefore uneven:
+- Windows has the strongest implementation presence
+- Linux has explicit policy logic in code
+- Android and macOS are mostly design intent in the current repository
+
+## Current Platform Posture
+
+| Platform | Repository Posture | Current Reality |
+|----------|--------------------|-----------------|
+| Windows | Primary implementation target | Concrete optimization modules exist |
+| Linux | Restricted / consent-gated | Safety policy exists in code |
+| macOS | Limited / conceptual | Mentioned in docs, little concrete implementation in tree |
+| Android | Design target | Guide exists, referenced implementation is not present |
+
+## Windows
+
+### Current Status
+
+Windows is the platform with the clearest implementation footprint in the repo.
+
+Concrete modules:
+- `src/optimization/windows_bloatware.py`
+- `src/optimization/windows_optimizer.py`
+
+Orchestrator integration:
+- the orchestrator initializes Windows-specific modules
+- it exposes helper workflows for bloatware removal
+- Windows-specific behavior is present, but full end-to-end runtime usage remains partial
+
+### Implemented Strategy
+
+The repository currently supports a Windows-first optimization posture through:
+- bloatware scanning/removal
+- Windows tuning and privacy-oriented optimizations
+- security hardening support through protection/control modules
+
+### Limits
+
+The repo should not currently be described as a verified Windows deployment product:
+- orchestrator loop behavior is still skeletal
+- integration depth is uneven
+- platform modules exist, but production-readiness is not established
+
+## Linux
+
+### Current Status
+
+Linux policy is one of the more explicit cross-platform decisions represented in code.
+
+In `src/safety/behavioral_constraints.py`:
+- `is_linux()` checks platform type
+- `should_infect()` returns consent-gated behavior for Linux
+- `_has_explicit_user_consent()` checks for explicit consent files
+
+### Effective Policy
+
+Current coded intent:
+- Linux should not be treated like a default active target
+- explicit user consent is required before proceeding
+
+This is the clearest expression of platform restraint in the repository.
+
+### Practical Interpretation
+
+Compared with Windows:
+- Linux has policy logic
+- Linux does not have a similarly concrete Linux-specific optimization/control layer wired through the runtime
+- the project should be described as Linux-restricted rather than Linux-supported in the same sense as Windows
+
+## macOS
+
+### Current Status
+
+macOS appears in project messaging and platform tables, but the repository does not currently contain a dedicated macOS module set comparable to Windows.
+
+Practical interpretation:
+- macOS is a design target, not a strongly implemented platform in this repo
+
+### Strategy Statement
+
+The most accurate current statement is:
+- intended limited support
+- constrained by platform restrictions
+- not materially represented by concrete implementation in the tree
+
+## Android
+
+### Current Status
+
+Android remains a documented design target, not a present implementation in the repository.
+
+Current evidence:
+- `docs/ANDROID_GUIDE.md` describes Android support as planned/design-oriented
+- the repository does not currently include `src/optimization/android_optimizer.py`
+- the repository does not currently include `test_android.py`
+
+### Strategy Statement
+
+The repo should describe Android as:
+- planned support area
+- design guidance exists
+- implementation is not currently present in the source tree
+
+## Gaming Mode
+
+### Current Status
+
+Gaming mode is partially implemented and is one of the more concrete behavior strategies in the repo.
+
+Implemented or represented in code:
+- `OperationMode` includes `GAMING`, `IDLE`, `STEALTH`, and `NORMAL`
+- `BehavioralConstraints` contains gaming-related resource limits
+- `detect_gaming_mode()` checks process names and attempts GPU/fullscreen heuristics
+- `get_current_mode()` prioritizes gaming, idle, stealth, then normal
+- the orchestrator checks `detect_gaming_mode()` and branches between gaming and normal cycles
+
+### What Is Real Today
+
+Current coded behavior supports these claims:
+- gaming is intended to be the highest-priority low-impact mode
+- gaming mode resource limits are stricter than normal mode
+- the orchestrator is aware of gaming mode
+
+### What Is Not Yet Fully Realized
+
+The repo should not currently claim all gaming-mode behavior described in earlier docs:
+- no validated system tray integration
+- no implemented manual mode-file override path in the current safety module
+- no fully realized transition manager in the runtime
+- orchestrator gaming-cycle behavior is still stubbed
+
+### Practical Strategy
+
+The accurate current summary is:
+- gaming mode exists conceptually and partially in code
+- low-impact intent is real
+- full runtime behavior is not yet complete
+
+## Resource Management Strategy
+
+### Current Coded Modes
+
+The safety module defines these operational modes:
+- `NORMAL`
+- `GAMING`
+- `IDLE`
+- `STEALTH`
+- `AGGRESSIVE`
+
+Current resource-limit strategy in code includes:
+- normal limits
+- stricter gaming limits
+- more permissive idle limits
+
+Battery-aware behavior is partially represented through `_is_battery_saver()`, which influences `STEALTH` mode selection.
+
+### Important Caveat
+
+The orchestrator currently does not fully operationalize all mode behaviors:
+- it checks for gaming mode
+- it does not yet execute a rich differentiated workload per mode
+- `current_mode` handling is not yet fully synchronized with the detection helpers
+
+## Platform Priorities
+
+### Accurate Current Priority Order
+
+1. Windows
+Current implementation emphasis is strongest here.
+
+2. Linux policy / safety handling
+There is explicit code-driven behavior, but not comparable active-platform implementation.
+
+3. macOS and Android as design targets
+They remain mostly documentary or conceptual in the current repository.
+
+## What Earlier Docs Overclaimed
+
+Earlier strategy language implied:
+- complete Windows behavior orchestration
+- implemented Android support
+- implemented UI/system tray controls
+- mature mode-transition management
+- broader platform completeness than the tree currently supports
+
+Those claims should now be treated as design intent rather than current platform strategy.
+
+## Recommended Wording For The Repo
+
+If the project needs a short platform statement, use something close to:
+
+```text
+Windows is the primary implementation target in the current repository.
+Linux behavior is explicitly restricted and consent-gated.
+Gaming mode and resource-aware behavior are partially implemented.
+macOS and Android remain design targets with limited or absent concrete implementation.
+```
+
+## Near-Term Cleanup / Follow-Up
+
+1. Align `README.md` platform claims with this document
+2. Audit `docs/WINDOWS_GUIDE.md` for aspirational features that are not in code
+3. Keep Android references clearly marked as planned support
+4. Decide whether Linux is a carrier, a consent-only local install target, or both
+5. Reconcile `current_mode` state management in the orchestrator with the detection logic in safety
 
 ---
 
-## 🖥️ Platform-Specific Implementation
-
-### Windows (Primary)
-
-**Optimization Focus:**
-- Remove bloatware and trial software
-- Disable unnecessary startup programs
-- Clean registry and temp files
-- Update drivers and software
-- Optimize Windows Update settings
-- Defragment HDDs (not SSDs)
-- Disable telemetry and tracking
-- Remove pre-installed crapware
-
-**Security Focus:**
-- Enable Windows Defender properly
-- Patch common vulnerabilities
-- Close unnecessary services
-- Configure firewall rules
-- Remove known malware
-
-**Resource Management:**
-- Aggressive when idle
-- Minimal when active
-- Near-zero when gaming
-
-### Linux (Passive)
-
-**Strategy:** **DO NOT INFECT**
-
-Reasons:
-1. Linux users know their systems
-2. They optimize themselves
-3. They'd detect and remove it anyway
-4. It's rude to optimize someone's carefully crafted setup
-5. They probably have strong opinions about systemd
-
-**Exception:** Explicit opt-in only
-- User manually installs protocol
-- Clear consent required
-- Limited to monitoring/reporting only
-
-### macOS (Limited)
-
-**Optimization Focus:**
-- Clean cache files
-- Remove unused applications
-- Optimize storage
-- Manage login items
-- Update software
-
-**Constraints:**
-- Apple's sandbox restrictions
-- System Integrity Protection
-- Limited system access
-- No kernel-level optimization
-
----
-
-## 🎮 Gaming Mode
-
-### Philosophy
-**"When gaming, be invisible."**
-
-Gaming is sacred. The protocol should have *near-zero* impact during gameplay.
-
-### Gaming Detection Methods
-
-#### Method 1: Process Detection
-```python
-GAMES = [
-    # Steam games
-    "steam.exe", "dota2.exe", "csgo.exe", "hl2.exe",
-    # Epic Games
-    "FortniteClient-Win64-Shipping.exe", "EpicGamesLauncher.exe",
-    # EA/Origin
-    "origin.exe", "fifa*.exe", "battlefield*.exe",
-    # Battle.net
-    "Overwatch.exe", "Wow.exe", "Hearthstone.exe",
-    # Xbox Game Pass
-    "XboxGames.exe",
-    # Common game engines
-    "Unity.exe", "UnrealEngine*", "Godot.exe",
-    # Add more...
-]
-```
-
-#### Method 2: GPU Usage Detection
-- GPU usage > 70% for > 30 seconds = likely gaming
-- GPU memory heavily used
-- 3D acceleration active
-
-#### Method 3: Fullscreen Detection
-- Exclusive fullscreen application running
-- No window switching for extended period
-
-#### Method 4: Input Pattern Analysis
-- High keyboard/mouse activity
-- Gamepad connected and active
-- Low idle time
-
-#### Method 5: Network Pattern Detection
-- Game server connections (Steam, Epic, etc.)
-- Voice chat active (Discord, TeamSpeak)
-- Known game ports in use
-
-### Gaming Mode Behavior
-
-#### Resource Limits (Gaming Mode)
-```python
-GAMING_LIMITS = {
-    "max_cpu_usage": 5,        # Down from 30%
-    "max_memory_mb": 100,       # Down from 500MB
-    "max_disk_io_mbps": 1,      # Minimal disk access
-    "max_network_mbps": 0.5,    # Almost no network
-    "background_tasks": False,  # No background optimization
-    "scan_interval_sec": 300,   # Check every 5 min instead of 1 min
-}
-```
-
-#### Actions During Gaming
-**ALLOWED:**
-- ✅ Monitor for actual malware (security only)
-- ✅ Emergency security patches (critical only)
-- ✅ Minimal health check every 5 minutes
-
-**FORBIDDEN:**
-- ❌ Performance optimization
-- ❌ Disk cleanup
-- ❌ Updates installation
-- ❌ Network scanning
-- ❌ Propagation attempts
-- ❌ Any CPU/disk intensive operation
-
-### Gaming Mode Toggle
-
-#### Automatic Detection (Default)
-- Monitor for gaming signals
-- Enter gaming mode automatically
-- Exit when gaming ends
-
-#### Manual Toggle
-```bash
-# Force gaming mode on
-echo "gaming" > /tmp/benevolent_protocol_mode
-
-# Return to normal mode
-echo "normal" > /tmp/benevolent_protocol_mode
-
-# Force aggressive mode (when idle)
-echo "aggressive" > /tmp/benevolent_protocol_mode
-```
-
-#### Windows System Tray Integration
-- Right-click icon → "Gaming Mode: ON/OFF"
-- Visual indicator of current mode
-- Quick toggle during gameplay
-
----
-
-## ⚙️ Resource Management Strategy
-
-### Mode Hierarchy
-
-```
-IDLE MODE (User away)
-├── Max CPU: 60%
-├── Max Memory: 1GB
-├── Full optimization allowed
-├── Propagation allowed
-└── Deep scanning enabled
-
-NORMAL MODE (User active, non-gaming)
-├── Max CPU: 30%
-├── Max Memory: 500MB
-├── Light optimization
-├── Propagation paused
-└── Standard scanning
-
-GAMING MODE (Game detected)
-├── Max CPU: 5%
-├── Max Memory: 100MB
-├── No optimization
-├── No propagation
-├── Security monitoring only
-└── Minimal footprint
-
-STEALTH MODE (Battery saver / Low resources)
-├── Max CPU: 10%
-├── Max Memory: 200MB
-├── Critical operations only
-└── Extended sleep intervals
-```
-
-### Mode Detection Logic
-
-```python
-def detect_mode() -> Mode:
-    # Priority order (highest to lowest)
-
-    # 1. Manual override
-    if manual_mode_set():
-        return get_manual_mode()
-
-    # 2. Gaming detection
-    if is_gaming():
-        return Mode.GAMING
-
-    # 3. Idle detection
-    if is_idle(duration=10*60):  # 10 minutes
-        return Mode.IDLE
-
-    # 4. Battery saver
-    if on_battery() and battery_low(<20%):
-        return Mode.STEALTH
-
-    # 5. Default
-    return Mode.NORMAL
-```
-
----
-
-## 🔄 Windows-Specific Optimizations
-
-### Bloatware Removal
-
-**Common Targets:**
-```
-- Candy Crush Saga
-- Microsoft Solitaire Collection
-- Xbox Live (if not gaming)
-- Mixed Reality Portal
-- Skype (if unused)
-- OneDrive (if unused)
-- Cortana (disable, not remove)
-- Microsoft Edge (can't remove, but can optimize)
-- Windows Tips & Suggestions
-- Feedback Hub
-- 3D Viewer
-- Paint 3D
-- Mail & Calendar (if unused)
-- Maps (if unused)
-- Weather (if unused)
-```
-
-**Removal Method:**
-```powershell
-# PowerShell commands to remove bloatware
-Get-AppxPackage *CandyCrush* | Remove-AppxPackage
-Get-AppxPackage *Solitaire* | Remove-AppxPackage
-# etc...
-```
-
-### Performance Optimizations
-
-**Windows-Specific:**
-```python
-WINDOWS_OPTIMIZATIONS = [
-    # Disable unnecessary services
-    "Disable SysMain (Superfetch) if SSD",
-    "Disable Windows Search indexing during gaming",
-    "Disable Xbox Game Bar (unless used)",
-    "Disable transparency effects",
-
-    # Power management
-    "Set High Performance power plan during gaming",
-    "Disable USB selective suspend",
-    "Disable processor idle states",
-
-    # Network optimization
-    "Disable Windows Update delivery optimization",
-    "Optimize network adapter settings",
-    "Disable bandwidth reservation for Windows Update",
-
-    # Storage optimization
-    "Disable automatic defrag on SSDs",
-    "Clean Windows.old if present",
-    "Compact OS files (Windows 10+)",
-
-    # Privacy/Telemetry
-    "Disable Windows telemetry (basic)",
-    "Disable advertising ID",
-    "Disable app launch tracking",
-]
-```
-
----
-
-## 🐧 Linux Policy
-
-### Official Stance: **DO NOT INFECT LINUX**
-
-**Rationale:**
-1. **Respect:** Linux users have earned the right to manage their own systems
-2. **Redundancy:** They already have package managers, cron jobs, and scripts
-3. **Detection Risk:** They'll find it immediately
-4. **Cultural:** Linux culture values system control and transparency
-5. **Practical:** Limited benefit vs. potential annoyance
-
-### Linux Detection
-
-```python
-def is_linux() -> bool:
-    return platform.system() == "Linux"
-
-def should_infect() -> bool:
-    if is_linux():
-        # Only if explicitly installed by user
-        return has_explicit_user_consent()
-    return True  # Windows/macOS: proceed with stealth
-```
-
-### Linux Behavior
-
-If somehow running on Linux:
-
-**Allowed:**
-- ✅ Monitor system health
-- ✅ Report status (if explicitly installed)
-- ✅ Exist quietly
-
-**Forbidden:**
-- ❌ Propagation
-- ❌ Optimization
-- ❌ Modification
-- ❌ Network scanning
-- ❌ Any changes whatsoever
-
----
-
-## 📊 Platform Priority Matrix
-
-| Platform | Infect? | Optimize? | Propagate? | Priority |
-|----------|---------|-----------|------------|----------|
-| Windows  | ✅ Yes  | ✅ Yes    | ✅ Yes     | Primary  |
-| macOS    | ⚠️ Limited | ⚠️ Limited | ❌ No   | Secondary |
-| Linux    | ❌ No   | ❌ No     | ❌ No      | None     |
-| IoT      | ⚠️ TBD  | ⚠️ TBD    | ⚠️ TBD     | Future   |
-| Android  | ❌ No   | ❌ No     | ❌ No      | None     |
-| iOS      | ❌ No   | ❌ No     | ❌ No      | None     |
-
----
-
-## 🎮 Gaming Mode Implementation
-
-### Detection Algorithm
-
-```python
-class GamingModeDetector:
-    def __init__(self):
-        self.game_processes = load_game_database()
-        self.gpu_monitor = GPUMonitor()
-        self.activity_monitor = ActivityMonitor()
-
-    def is_gaming(self) -> bool:
-        confidence = 0.0
-
-        # Process detection (weight: 40%)
-        running_games = self.detect_game_processes()
-        if running_games:
-            confidence += 0.4
-
-        # GPU usage (weight: 30%)
-        if self.gpu_monitor.get_usage() > 70:
-            confidence += 0.3
-
-        # Fullscreen app (weight: 20%)
-        if self.has_fullscreen_app():
-            confidence += 0.2
-
-        # Gamepad active (weight: 10%)
-        if self.gamepad_active():
-            confidence += 0.1
-
-        return confidence >= 0.5  # 50% confidence threshold
-
-    def detect_game_processes(self) -> List[str]:
-        running = psutil.process_iter(['name'])
-        return [p for p in running if p['name'] in self.game_processes]
-```
-
-### Mode Transition
-
-```python
-class ModeManager:
-    def transition_to_gaming(self):
-        """Safely transition to gaming mode"""
-        # 1. Stop all non-essential operations
-        self.stop_optimizations()
-
-        # 2. Reduce resource limits
-        self.apply_gaming_limits()
-
-        # 3. Increase scan intervals
-        self.set_scan_interval(300)  # 5 minutes
-
-        # 4. Log mode change
-        self.log("Entered GAMING MODE - Minimal footprint")
-
-    def transition_from_gaming(self):
-        """Return to normal operation"""
-        # 1. Restore normal limits
-        self.apply_normal_limits()
-
-        # 2. Resume standard operations
-        self.resume_optimizations()
-
-        # 3. Reset scan intervals
-        self.set_scan_interval(60)  # 1 minute
-
-        # 4. Log mode change
-        self.log("Exited GAMING MODE - Normal operations resumed")
-```
-
----
-
-## 🔋 Battery Awareness
-
-### Laptop Battery Mode
-
-When on battery power:
-
-```python
-BATTERY_MODE = {
-    "charging": {
-        "max_cpu": 30,
-        "optimizations": "full",
-        "propagation": "allowed"
-    },
-    "battery_high": {  # > 50%
-        "max_cpu": 20,
-        "optimizations": "light",
-        "propagation": "paused"
-    },
-    "battery_low": {  # < 20%
-        "max_cpu": 10,
-        "optimizations": "critical_only",
-        "propagation": "disabled"
-    }
-}
-```
-
----
-
-## Summary
-
-**Linux:** Don't touch. They know what they're doing.
-**Windows:** Primary target. Optimize everything.
-**Gaming:** Be invisible. 5% CPU max. Security only.
-**Modes:** Dynamic resource management based on activity.
-
-The protocol should be **polite** - help when needed, disappear when not.
-
----
-
-*"Linux users are the immune system. Windows users need the vaccine."*
+**Platform Strategy Status:** Mixed implementation with clear Windows emphasis
+**Most Concrete Policy In Code:** Linux consent gating and gaming/resource limits

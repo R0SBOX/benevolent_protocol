@@ -1,8 +1,8 @@
-# THE BENEVOLENT PROTOCOL - Complete Project Status
+# THE BENEVOLENT PROTOCOL - Project Status
 
-**Last Updated:** 2026-02-28
+**Last Updated:** 2026-04-08
 **Version:** 0.3.0-alpha
-**Status:** ✅ All Modules Complete + Deployment Ready
+**Status:** Prototype / partial implementation
 
 ---
 
@@ -18,44 +18,56 @@ Benevolent Protocol:  Infects → Analyzes → Optimizes → Protects → Spread
 
 ---
 
-## 📊 Project Statistics
+## 📊 Status Summary
+
+The repository contains substantial code across all planned areas, but the implementation is not in the state previously claimed by this file.
+
+Current assessment:
+- module scaffolding exists for core, safety, control, analysis, optimization, protection, and propagation
+- several support modules are implemented enough to test directly
+- the newer orchestrator initializes modules and exposes helper workflows
+- the core runtime loop remains partial, and some documentation still describes the intended final system
+
+---
+
+## 📊 Repository Snapshot
 
 ### Code Metrics
-- **Total Lines of Code:** ~145,000+
-- **Documentation:** ~55,000+ lines
+- **Total Lines of Code:** repository contains many large modules, but prior published totals in this file were not verified
+- **Documentation:** extensive, but not consistently synchronized with the code
 - **Test Scripts:** 8 comprehensive suites
 - **Python Modules:** 20+ major modules
 - **Configuration Files:** 2 (schema + default)
 
-### Feature Completion
+### Implementation Assessment
 
 | Component | Status | Lines of Code |
 |-----------|--------|---------------|
-| Core Protocol Framework | ✅ Complete | 2,847 |
-| **Main Orchestrator** | ✅ **NEW** | 380 |
-| System Profiler | ✅ Complete | 9,237 |
-| Performance Optimizer | ✅ Complete | 9,240 |
-| Behavioral Constraints | ✅ Complete | 10,251 |
-| Gaming Mode Detection | ✅ Complete | (in constraints) |
-| Windows Bloatware Remover | ✅ Complete | 18,561 |
-| Windows System Optimizer | ✅ Complete | 16,407 |
-| Network Scanner | ✅ Complete | 11,256 |
-| Stealth Operations | ✅ Complete | 14,971 |
-| Propagation Engine | ✅ Complete | 14,482 |
-| Security Hardener | ✅ Complete | 719 |
-| Vulnerability Scanner | ✅ Complete | 759 |
-| Malware Scanner | ✅ Complete | 873 |
-| Malware Remover | ✅ Complete | 340 |
-| Kill Switch | ✅ Complete | 375 |
-| Command Receiver | ✅ Complete | 430 |
-| Telemetry Sender | ✅ Complete | 330 |
-| Heartbeat Manager | ✅ Complete | 280 |
-| Update Receiver | ✅ Complete | 470 |
-| **Configuration Schema** | ✅ **NEW** | 150 |
-| **Deployment Guide** | ✅ **NEW** | 400 |
-| **Install Script** | ✅ **NEW** | 160 |
+| Core Protocol Framework | Partial | Legacy core class exists, major TODO sections remain |
+| Main Orchestrator | Partial | Module wiring present, loop behavior still light/stubbed |
+| System Profiler | Present | Implemented module, not re-verified here feature-by-feature |
+| Performance Optimizer | Present | Implemented module, integration depth varies |
+| Behavioral Constraints | Present | One of the more concrete modules |
+| Gaming Mode Detection | Partial | Logic present, implementation needs maintenance |
+| Windows Bloatware Remover | Present | Windows-specific module exists |
+| Windows System Optimizer | Present | Windows-specific module exists |
+| Network Scanner | Present | Module exists |
+| Stealth Operations | Present | Module exists |
+| Propagation Engine | Present | Module exists |
+| Security Hardener | Present | Module exists |
+| Vulnerability Scanner | Present | Module exists |
+| Malware Scanner | Present | Module exists |
+| Malware Remover | Present | Module exists |
+| Kill Switch | Present | Implemented and tested directly |
+| Command Receiver | Present | Implemented and tested directly |
+| Telemetry Sender | Present | Implemented and tested directly |
+| Heartbeat Manager | Present | Implemented and tested directly |
+| Update Receiver | Present | Implemented and tested directly |
+| Configuration Schema | Present | Config files exist |
+| Deployment Guide | Needs revision | Contains instructions beyond the current runtime state |
+| Install Scripts | Present | Deployment artifacts exist; production-readiness not claimed |
 
-**Overall Progress:** 100% (All modules + deployment!)
+**Overall Progress:** prototype with many implemented modules, not production-ready end-to-end
 
 ---
 
@@ -132,64 +144,50 @@ benevolent_protocol/
 
 ---
 
-## ✅ Completed Phases
+## ✅ / 🚧 Phases
 
-### Phase 1: Foundation ✅
-- Core protocol framework
-- System profiler
-- Performance optimizer
-- Behavioral constraints
+### Phase 1: Foundation
+- Behavioral constraints, profiling, and baseline control components exist
+- Core protocol orchestration exists in partial form
 
-### Phase 2: Platform Support ✅
-- Windows bloatware remover
-- Windows system optimizer
-- Android device optimizer
-- Platform strategy
+### Phase 2: Platform Support
+- Windows-specific modules exist
+- Platform strategy docs exist
+- Android implementation described in docs is not reflected by current repo files
 
-### Phase 3: Propagation ✅
-- Network scanner
-- Stealth operations
-- Propagation engine
-- Dynamic evasion
+### Phase 3: Propagation
+- Propagation-related modules exist
+- End-to-end propagation behavior was not validated in this status refresh
 
-### Phase 4: Security ✅
-- Vulnerability scanner
-- Security hardener
-- Malware scanner
-- Malware remover
+### Phase 4: Security
+- Security and malware modules exist
+- Integration with the main runtime remains partial
 
-### Phase 5: Control ✅
-- Kill switch system
-- Command receiver
-- Telemetry sender
-- Heartbeat manager
-- Update receiver
+### Phase 5: Control
+- Control modules are present and have direct test coverage
 
-### Phase 6: Integration & Deployment ✅
-- Main orchestrator
-- Configuration management
-- Deployment guide
-- Systemd service
-- Installation script
+### Phase 6: Integration & Deployment
+- Orchestrator, configuration, service file, and install scripts exist
+- Full deployment readiness is not claimed
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Practical Starting Point
 
 ```bash
-# Clone and install
+# Clone and install dependencies
 git clone https://github.com/r0s-org/benevolent_protocol.git
 cd benevolent_protocol
-sudo ./deploy/install.sh
+pip install -r requirements.txt
 
-# Configure
-sudo nano /etc/benevolent_protocol/config.json
+# Explore implemented modules
+python src/analysis/system_profiler.py
+python src/protection/vulnerability_scanner.py
+python src/protection/malware_scanner.py
 
-# Start
-sudo systemctl start benevolent-protocol
-
-# Monitor
-sudo journalctl -u benevolent-protocol -f
+# Run current tests
+pytest tests/test_control.py
+pytest tests/test_integration.py
 ```
 
 ---
@@ -197,33 +195,34 @@ sudo journalctl -u benevolent-protocol -f
 ## 🔧 Next Steps
 
 ### Immediate
-1. ✅ Test installation script
-2. ✅ Verify systemd service
-3. ✅ Test orchestrator lifecycle
-4. ⏳ Real-world testing
+1. Reconcile docs with actual entry points and module behavior
+2. Audit orchestrator calls against concrete module APIs
+3. Fix obvious runtime issues in mode detection / lifecycle paths
+4. Decide whether the project is a prototype, simulator, or deployable agent
 
 ### Future
-- Community feedback
-- Performance optimization
-- Additional platform support
-- Web dashboard (optional)
+- Expand verified integration coverage
+- Add platform-specific verification
+- Tighten configuration/CLI behavior
+- Revisit deployment packaging after runtime stabilization
 
 ---
 
 ## 📋 Deployment Checklist
 
-- [x] Main orchestrator
+- [x] Main orchestrator file exists
 - [x] Configuration schema
 - [x] Default configuration
-- [x] Deployment guide
+- [x] Deployment guide exists
 - [x] Systemd service file
 - [x] Installation script
-- [x] Integration tests
+- [x] Integration/control tests exist
+- [ ] End-to-end runtime verification
 - [ ] Production testing
 - [ ] Community review
 
 ---
 
 **Version:** 0.3.0-alpha
-**Status:** Ready for production testing
-**Next Milestone:** v0.4.0-beta with community feedback
+**Status:** Prototype with partial orchestration
+**Next Milestone:** runtime/API reconciliation and verified integration
