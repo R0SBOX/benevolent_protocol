@@ -63,8 +63,19 @@ class KillSwitch:
         self._post_shutdown_hooks: List[Callable] = []
         
         # Register signal handlers
-        signal.signal(signal.SIGUSR1, self._signal_handler)
-        signal.signal(signal.SIGTERM, self._signal_handler)
+        self._register_signal_handlers()
+
+    def _register_signal_handlers(self):
+        """Register only the signals supported on this platform."""
+        supported_signals = []
+
+        if hasattr(signal, "SIGUSR1"):
+            supported_signals.append(signal.SIGUSR1)
+        if hasattr(signal, "SIGTERM"):
+            supported_signals.append(signal.SIGTERM)
+
+        for sig in supported_signals:
+            signal.signal(sig, self._signal_handler)
         
     def register_pre_shutdown_hook(self, hook: Callable):
         """Register function to call before shutdown"""
