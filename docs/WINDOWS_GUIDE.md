@@ -1,461 +1,259 @@
 # Windows Usage Guide - THE BENEVOLENT PROTOCOL
 
-Complete guide for using the protocol on Windows systems.
+> Status note: this guide reflects the current repository state. Windows is the strongest implementation area in the repo, but the project should still be treated as a prototype rather than a verified end-to-end Windows product.
 
----
+## Overview
 
-## 🎯 Quick Start (Windows)
+Windows has the most concrete platform support in the current codebase.
+
+Relevant modules:
+- `src/optimization/windows_bloatware.py`
+- `src/optimization/windows_optimizer.py`
+- `src/core/orchestrator.py`
+- `src/safety/behavioral_constraints.py`
+
+What this means in practice:
+- Windows-specific optimization modules exist
+- the orchestrator initializes those modules
+- helper workflows for scanning and optimization are present
+- the main runtime loop is still only partially realized
+
+## Quick Start
 
 ### 1. Install Dependencies
 
 ```bash
-# Install Python dependencies
-pip install psutil asyncio
-
-# Or use requirements.txt
 pip install -r requirements.txt
 ```
 
-### 2. Scan System (Read-Only)
+### 2. Inspect The System
 
 ```bash
-# Profile your system
+# Profile the host
 python src/analysis/system_profiler.py
 
-# Check for bloatware
+# Exercise Windows-focused tooling
 python test_windows_tools.py
 ```
 
-### 3. Remove Bloatware
+### 3. Run The Current Orchestrator
+
+```bash
+python -m src.core.orchestrator
+```
+
+This currently gives you:
+- configuration loading
+- module initialization
+- initial system profiling
+- heartbeat startup
+- a partial main loop
+
+It does not yet represent a fully realized Windows operations pipeline.
+
+## Windows-Specific Modules
+
+### Bloatware Removal
+
+Primary module:
+- `src/optimization/windows_bloatware.py`
+
+Current intended usage pattern:
 
 ```python
 from src.optimization.windows_bloatware import WindowsBloatwareRemover
 
-# Create remover
-remover = WindowsBloatwareRemover()
-
-# Scan for bloatware
-installed = remover.scan_installed_bloatware()
-
-# Remove all safe-to-remove apps
-results = remover.remove_all_safe_bloatware()
-
-print(f"Removed: {results['success']}")
-print(f"Failed: {results['failed']}")
-print(f"Skipped: {results['skipped']}")
-```
-
-### 4. Optimize System
-
-```python
-from src.optimization.windows_optimizer import WindowsSystemOptimizer
-
-# Create optimizer
-optimizer = WindowsSystemOptimizer()
-
-# Get optimization report
-report = optimizer.get_optimization_report()
-
-# Apply safe optimizations (privacy + security)
-results = optimizer.apply_safe_optimizations()
-
-print(f"Applied: {results['success']}")
-```
-
----
-
-## 🗑️ Bloatware Removal
-
-### What Gets Removed
-
-**✅ Automatically Removed (Safe):**
-- Candy Crush Saga / Soda Saga
-- Microsoft Solitaire Collection
-- Minecraft (UWP trial)
-- Royal Revolt 2
-- Skype App
-- Maps, Weather, News, Sports apps
-- Paint 3D, 3D Viewer
-- Groove Music
-- Voice Recorder
-- Feedback Hub
-- Get Help / Tips
-- Mixed Reality Portal
-- Wallet
-
-**⚠️ Requires Review (User Might Want):**
-- Mail and Calendar
-- OneNote
-- Photos
-- Movies & TV
-- Calculator
-- Camera
-- Sticky Notes
-- Xbox Game Bar (gamers)
-- Microsoft Office Hub
-
-### Manual Control
-
-```python
-# Scan and review
 remover = WindowsBloatwareRemover()
 installed = remover.scan_installed_bloatware()
 
-# Show what's installed
 for item in installed:
-    print(f"{item.name}: {item.description}")
-    print(f"  Safe to remove: {item.safe_to_remove}")
-
-# Remove specific app
-target = installed[0]  # First app
-success, message = remover.remove_bloatware(target, force=True)
-
-# Force remove even "user might want" apps
-remover.remove_bloatware(item, force=True)
+    print(item.name, item.safe_to_remove)
 ```
 
-### Bloatware Categories
+The repository presents this module as one of the more concrete Windows-specific features.
 
-| Category | Apps | Auto-Remove |
-|----------|------|-------------|
-| **Games** | Candy Crush, Solitaire, Minecraft | ✅ Yes |
-| **Trialware** | Office Hub, Skype | ✅ Yes |
-| **Tools** | Maps, Weather, News | ✅ Yes |
-| **Creative** | Paint 3D, 3D Viewer | ✅ Yes |
-| **Productivity** | Mail, Calendar, OneNote | ⚠️ Review |
-| **Media** | Photos, Movies & TV | ⚠️ Review |
-| **Gaming Tools** | Xbox Game Bar | ⚠️ Review |
+Important caveat:
+- treat removal operations carefully and review detected applications before applying destructive changes
 
----
+### Windows Optimization
 
-## ⚡ System Optimization
+Primary module:
+- `src/optimization/windows_optimizer.py`
 
-### Performance Optimizations
-
-| Optimization | Impact | Restart Required |
-|--------------|--------|------------------|
-| Disable SysMain (SSD) | Medium | Yes |
-| High Performance Power Plan | High | No |
-| Disable Transparency Effects | Low | No |
-| Disable UI Animations | Low | No |
-| Disable Hibernation | Medium | No |
-| Reduce System Restore | Low | No |
-| Disable Windows Search | Low | No |
-
-### Privacy Optimizations
-
-| Optimization | Impact | Auto-Apply |
-|--------------|--------|------------|
-| Set Telemetry to Basic | Medium | ✅ Yes |
-| Disable Advertising ID | Low | ✅ Yes |
-| Disable App Launch Tracking | Low | ✅ Yes |
-| Disable Location Tracking | Medium | ✅ Yes |
-
-### Security Optimizations
-
-| Optimization | Impact | Auto-Apply |
-|--------------|--------|------------|
-| Enable Windows Defender | High | ✅ Yes |
-| Enable Windows Firewall | High | ✅ Yes |
-| Disable Remote Registry | Medium | ✅ Yes |
-
-### Service Optimizations
-
-| Optimization | Impact | Auto-Apply |
-|--------------|--------|------------|
-| Disable Print Spooler | Low | ⚠️ Manual |
-| Disable Fax Service | Low | ⚠️ Manual |
-| Disable Xbox Services | Medium | ⚠️ Manual |
-
-### Apply Optimizations
+Current intended usage pattern:
 
 ```python
 from src.optimization.windows_optimizer import WindowsSystemOptimizer
 
 optimizer = WindowsSystemOptimizer()
 
-# Option 1: Apply only safe optimizations (privacy + security)
-results = optimizer.apply_safe_optimizations()
-
-# Option 2: Apply specific optimization
-opt = optimizer.optimizations[0]  # First optimization
-success, message = optimizer.apply_optimization(opt)
-
-# Option 3: Rollback optimization
-optimizer.rollback_optimization("Disable SysMain (Superfetch)")
+for opt in optimizer.optimizations:
+    print(opt.name, opt.category, opt.impact)
 ```
 
----
+Practical interpretation:
+- the optimizer module exists and contains Windows-specific actions
+- repository docs should not overstate those actions as fully validated across production Windows environments
 
-## 🎮 Gaming Mode
+## Bloatware Strategy
 
-### Automatic Detection
+The repository’s Windows bloatware support is aimed at common preinstalled or low-value applications.
 
-The protocol automatically detects gaming and enters **ultra-low-impact mode**:
+Representative categories in the current code/docs:
+- games and trialware
+- consumer apps
+- optional Microsoft utilities
+- nonessential tooling
 
-**Detection Methods:**
-1. Process scanning (Steam, Epic, Battle.net, etc.)
-2. GPU usage > 70%
-3. Fullscreen application running
-4. Gamepad activity
+Use the module as a scanner first.
+
+Recommended workflow:
+1. scan installed items
+2. review `safe_to_remove`
+3. remove selectively
+4. verify outcome manually
+
+## Optimization Strategy
+
+The Windows optimizer module is aimed at areas such as:
+- service configuration
+- privacy settings
+- visual effects
+- system behavior tuning
+- security-related settings
+
+The exact set of optimizations should be taken from the code, not from older high-level docs.
+
+Recommended workflow:
+1. inspect optimizer entries
+2. review impact and rollback data
+3. apply selectively
+4. verify whether restart is required
+
+## Gaming Mode
+
+### Current Status
+
+Gaming mode is partially implemented in the repository.
+
+What is represented in code:
+- gaming-related resource limits in `BehavioralConstraints`
+- process-based gaming detection
+- additional GPU/fullscreen heuristics
+- orchestrator branching between gaming and non-gaming cycles
+
+What is not fully realized:
+- a complete transition manager
+- validated manual override behavior via mode files
+- a fully implemented gaming workload policy in the orchestrator loop
+
+### Accurate Current Claim
+
+The safest current description is:
+- Windows gaming awareness exists
+- low-impact intent is encoded
+- full runtime gaming behavior is still partial
 
 ### Resource Limits
 
-| Mode | CPU | Memory | Disk I/O | Network |
-|------|-----|--------|----------|---------|
-| **Gaming** | 5% | 100MB | 1 Mbps | 0.5 Mbps |
-| **Normal** | 30% | 500MB | 10 Mbps | 10 Mbps |
-| **Idle** | 60% | 1GB | 50 Mbps | 20 Mbps |
+The safety module defines stricter gaming-mode limits than normal-mode limits, including:
+- CPU reduction
+- reduced memory budget
+- lower network budget
+- minimal disk activity intent
 
-### Gaming Behavior
+Those limits are part of the policy layer. The main loop does not yet fully operationalize every behavior implied by that policy.
 
-**ALLOWED:**
-- ✅ Critical security monitoring
-- ✅ Emergency malware detection
-- ✅ Minimal health checks (5 min intervals)
+## Linux Policy In The Windows Context
 
-**FORBIDDEN:**
-- ❌ Performance optimization
-- ❌ Disk cleanup
-- ❌ Updates
-- ❌ Network scanning
-- ❌ Propagation
-- ❌ ANY intensive operation
+This Windows guide previously mixed in strong claims about Linux behavior.
 
-### Manual Gaming Mode
+The current repository position is:
+- Linux behavior is consent-gated in `src/safety/behavioral_constraints.py`
+- Linux should not be described here as a Windows feature
+- platform-wide policy belongs primarily in `docs/PLATFORM_STRATEGY.md`
 
-```python
-# Force gaming mode on
-with open('/tmp/benevolent_protocol_mode', 'w') as f:
-    f.write('gaming')
+See:
+- [PLATFORM_STRATEGY.md](/home/r0s/projects/benevolent_protocol/docs/PLATFORM_STRATEGY.md)
 
-# Return to normal mode
-with open('/tmp/benevolent_protocol_mode', 'w') as f:
-    f.write('normal')
+## Advanced Usage
 
-# Aggressive mode (when idle)
-with open('/tmp/benevolent_protocol_mode', 'w') as f:
-    f.write('aggressive')
-```
+### Orchestrator Helper Methods
 
----
+The orchestrator exposes helper workflows such as:
+- `optimize_system()`
+- `remove_bloatware()`
+- `scan_vulnerabilities()`
+- `scan_malware()`
+- `harden_security()`
 
-## 🐧 Linux Policy
+That makes it useful as a convenience integration point even though the main loop remains partial.
 
-**DO NOT INFECT LINUX SYSTEMS**
-
-The protocol respects Linux users:
+### Example
 
 ```python
-from src.safety.behavioral_constraints import BehavioralConstraints
+import asyncio
+from src.core.orchestrator import BenevolentProtocol
 
-constraints = BehavioralConstraints()
+async def main():
+    protocol = BenevolentProtocol()
 
-if constraints.is_linux():
-    # Do not infect
-    # Do not optimize
-    # Do not propagate
-    print("Linux detected - staying dormant")
+    results = await protocol.optimize_system()
+    print(results)
 
-    # Only exception: explicit user consent
-    if constraints.should_infect():
-        print("Explicit consent found - proceeding")
+asyncio.run(main())
 ```
 
-**Why:**
-- Linux users optimize their own systems
-- They'd detect and remove it anyway
-- Cultural respect for expertise
-- Unnecessary on well-maintained Linux systems
+Important caveat:
+- helper methods depend on cross-module API compatibility and should still be treated as prototype behavior
 
-**Exception:** Explicit opt-in
-```bash
-# Create consent file to allow protocol
-touch /etc/benevolent_protocol_consent
-```
+## Expected Results
 
----
+The older guide gave precise improvement percentages. Those numbers are not currently verified by this repository alone.
 
-## 🔧 Advanced Usage
+A more accurate expectation is:
+- you can inspect Windows-specific optimization definitions
+- you can scan for bloatware candidates
+- you can exercise Windows modules directly
+- you should validate system-specific results manually
 
-### Complete System Optimization
+## Safety Notes
 
-```python
-from src.analysis.system_profiler import SystemProfiler
-from src.optimization.windows_bloatware import WindowsBloatwareRemover
-from src.optimization.windows_optimizer import WindowsSystemOptimizer
-from src.optimization.performance_tuner import PerformanceOptimizer
+Before making Windows changes:
+1. review optimizer entries and removal candidates
+2. ensure you understand rollback coverage
+3. prefer testing in a disposable or recoverable environment first
+4. do not assume all documented behavior is production-hardened
 
-# 1. Profile system
-profiler = SystemProfiler()
-profile = profiler.profile_system()
-opportunities = profiler.get_optimization_opportunities(profile)
+## Testing
 
-# 2. Remove bloatware
-remover = WindowsBloatwareRemover()
-bloatware = remover.scan_installed_bloatware()
-remover.remove_all_safe_bloatware()
-
-# 3. Optimize Windows
-optimizer = WindowsSystemOptimizer()
-optimizer.apply_safe_optimizations()
-
-# 4. Tune performance
-tuner = PerformanceOptimizer()
-tuner.run_all_optimizations()
-
-print("✅ Complete system optimization finished")
-```
-
-### Dry Run Mode
-
-```python
-# Scan without making changes
-remover = WindowsBloatwareRemover()
-installed = remover.scan_installed_bloatware()
-
-print("Would remove:")
-for item in installed:
-    if item.safe_to_remove:
-        print(f"  - {item.name}")
-
-# Don't call remove_bloatware() for dry run
-```
-
-### Selective Optimization
-
-```python
-optimizer = WindowsSystemOptimizer()
-
-# Apply only privacy optimizations
-privacy_opts = [
-    opt for opt in optimizer.optimizations
-    if opt.category == "privacy"
-]
-
-for opt in privacy_opts:
-    success, message = optimizer.apply_optimization(opt)
-    print(f"{opt.name}: {message}")
-```
-
----
-
-## 📊 Expected Results
-
-### After Bloatware Removal
-
-- **Disk Space Saved:** 500MB - 2GB
-- **Startup Time:** Reduced 10-30%
-- **Memory Usage:** Reduced 100-300MB
-- **Cleaner Start Menu:** Less clutter
-
-### After System Optimization
-
-- **CPU Performance:** 5-15% improvement
-- **Privacy:** Telemetry reduced to minimum
-- **Security:** Firewall and Defender active
-- **Boot Time:** 10-20% faster
-
-### During Gaming
-
-- **Protocol CPU Usage:** < 5%
-- **Memory Footprint:** < 100MB
-- **No Interruptions:** Optimizations paused
-- **Security:** Monitoring continues
-
----
-
-## ⚠️ Important Notes
-
-### Before Optimizing
-
-1. **Create Restore Point:**
-   ```bash
-   # Windows: System Restore
-   rstrui.exe
-   ```
-
-2. **Check Gaming Mode:**
-   - Ensure gaming detection works
-   - Test with your favorite games
-
-3. **Review Bloatware:**
-   - Check "user might want" list
-   - Don't remove apps you use
-
-### Rollback Capability
-
-All optimizations are reversible:
-
-```python
-# Rollback specific optimization
-optimizer.rollback_optimization("Disable SysMain (Superfetch)")
-
-# Check rollback commands
-for opt in optimizer.optimizations:
-    print(f"{opt.name}: {opt.rollback_command}")
-```
-
-### Restart Required
-
-Some optimizations require restart:
-
-```python
-# Check if restart needed
-for opt in optimizer.optimizations:
-    if opt.requires_restart:
-        print(f"⚠️  {opt.name} requires restart")
-```
-
----
-
-## 🧪 Testing
-
-### Test Bloatware Scanner
+Current relevant test entry points:
 
 ```bash
 python test_windows_tools.py
-```
-
-### Test Gaming Mode
-
-```bash
 python test_gaming_mode.py
+pytest tests/test_control.py
+pytest tests/test_integration.py
 ```
 
-### Test System Optimizer
+Important limitation:
+- async pytest support may need to be configured in the environment before all test files pass cleanly
 
-```python
-from src.optimization.windows_optimizer import WindowsSystemOptimizer
+## Summary
 
-optimizer = WindowsSystemOptimizer()
-report = optimizer.get_optimization_report()
+The most accurate current Windows summary is:
+- Windows is the strongest implementation area in the repository
+- Windows-specific optimizer and bloatware modules exist
+- gaming-aware and safety-aware policy exists
+- the orchestrator integrates these pieces only partially today
 
-# Review before applying
-for category, opts in report["optimizations"].items():
-    print(f"\n{category.upper()}:")
-    for opt in opts:
-        print(f"  {opt['name']} (Impact: {opt['impact']})")
-```
+If you need exact behavior, use the source files as the canonical reference:
+- `src/optimization/windows_bloatware.py`
+- `src/optimization/windows_optimizer.py`
+- `src/safety/behavioral_constraints.py`
+- `src/core/orchestrator.py`
 
 ---
 
-## 📝 Summary
-
-**Windows Users Get:**
-- ✅ Automatic bloatware removal
-- ✅ Privacy optimization
-- ✅ Security hardening
-- ✅ Performance tuning
-- ✅ Gaming mode (invisible during play)
-- ✅ Complete rollback capability
-
-**Linux Users Get:**
-- ❌ Nothing (as it should be)
-
-**The Protocol Philosophy:**
-> "Help Windows users who need it. Respect Linux users who don't. Never interfere with gaming."
-
----
-
-**Ready to optimize your Windows system? Run the tests first to see what would be changed.** 🚀
+**Windows Guide Status:** Updated to match current repository state
+**Best Windows Entry Point:** `src/core/orchestrator.py` plus direct Windows module inspection
