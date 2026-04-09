@@ -35,6 +35,8 @@ class CommandType(Enum):
     OPTIMIZE = "optimize"
     PROPAGATE = "propagate"
     QUARANTINE = "quarantine"
+    HARDEN = "harden"
+    ROLLBACK = "rollback"
     
     # Configuration commands
     UPDATE_CONFIG = "update_config"

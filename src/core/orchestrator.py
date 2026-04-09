@@ -148,12 +148,25 @@ class BenevolentProtocol:
         self.updater = UpdateReceiver(
             update_endpoint=self.config.get("update_endpoint")
         )
+        self.command_receiver = CommandReceiver(
+            secret_key=self.config.get("control_secret", "change_this_secret")
+        )
+        self._register_command_handlers()
         
         # Register kill switch hooks
         self.kill_switch.register_pre_shutdown_hook(self._pre_shutdown)
         self.kill_switch.register_post_shutdown_hook(self._post_shutdown)
         
         logger.info("All modules initialized")
+
+    def _register_command_handlers(self):
+        """Register orchestrator-backed command handlers."""
+        self.command_receiver.register_handler(CommandType.STATUS, self._handle_command_status)
+        self.command_receiver.register_handler(CommandType.SCAN, self._handle_command_scan)
+        self.command_receiver.register_handler(CommandType.OPTIMIZE, self._handle_command_optimize)
+        self.command_receiver.register_handler(CommandType.QUARANTINE, self._handle_command_quarantine)
+        self.command_receiver.register_handler(CommandType.HARDEN, self._handle_command_harden)
+        self.command_receiver.register_handler(CommandType.ROLLBACK, self._handle_command_rollback)
     
     async def start(self):
         """Start the protocol"""
@@ -329,7 +342,8 @@ class BenevolentProtocol:
             "telemetry": self.telemetry.get_stats(),
             "heartbeat": self.heartbeat.get_status(),
             "last_profile": self._serialize_profile(self._last_profile),
-            "last_cycle_summary": self._last_cycle_summary
+            "last_cycle_summary": self._last_cycle_summary,
+            "optimization_history": self.tuner.get_optimization_history(),
         }
     
     async def optimize_system(self, profile=None) -> Dict[str, Any]:
@@ -421,6 +435,7 @@ class BenevolentProtocol:
     async def scan_vulnerabilities(self) -> Dict[str, Any]:
         """Scan for vulnerabilities"""
         vulnerabilities = await self.vuln_scanner.scan()
+        recommendations = self.vuln_scanner.get_remediation_recommendations(vulnerabilities)
         
         return {
             "timestamp": datetime.now().isoformat(),
@@ -429,12 +444,14 @@ class BenevolentProtocol:
                 v for v in vulnerabilities
                 if SEVERITY_RANK.get(v.severity.value, -1) >= SEVERITY_RANK["critical"]
             ]),
-            "vulnerabilities": [{"id": v.id, "name": v.name, "severity": v.severity.value} for v in vulnerabilities]
+            "vulnerabilities": [{"id": v.id, "name": v.name, "severity": v.severity.value} for v in vulnerabilities],
+            "recommendations": [self._serialize_recommendation(rec) for rec in recommendations],
         }
     
     async def scan_malware(self) -> Dict[str, Any]:
         """Scan for malware"""
         threats = await self.malware_scanner.scan()
+        recommendations = self.malware_scanner.get_remediation_recommendations(threats)
         
         return {
             "timestamp": datetime.now().isoformat(),
@@ -447,7 +464,8 @@ class BenevolentProtocol:
                 "name": t.name,
                 "type": t.threat_type.value,
                 "severity": t.threat_level.value
-            } for t in threats]
+            } for t in threats],
+            "recommendations": [self._serialize_recommendation(rec) for rec in recommendations],
         }
     
     async def harden_security(self) -> Dict[str, Any]:
@@ -465,6 +483,90 @@ class BenevolentProtocol:
             "results": [{"vuln": r.vulnerability_id, "success": r.success} for r in results]
         }
 
+    async def handle_signed_command(self, raw_data: str, signature: str) -> Dict[str, Any]:
+        """Parse and execute a signed remote command."""
+        command = self.command_receiver.parse_command(raw_data, signature)
+        if not command:
+            return {"success": False, "message": "Invalid command"}
+        return await self.command_receiver.execute_command(command)
+
+    async def _handle_command_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Return current orchestrator status."""
+        return self.get_status()
+
+    async def _handle_command_scan(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Run explicit scan operations and return findings with remediation guidance."""
+        scan_type = params.get("scan_type", "all")
+        result: Dict[str, Any] = {"scan_type": scan_type}
+
+        if scan_type in ("all", "vulnerabilities"):
+            result["vulnerabilities"] = await self.scan_vulnerabilities()
+        if scan_type in ("all", "malware"):
+            result["malware"] = await self.scan_malware()
+
+        return result
+
+    async def _handle_command_optimize(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Run explicit optimization cycle."""
+        return await self.optimize_system()
+
+    async def _handle_command_quarantine(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply explicit threat removal/quarantine using the last known malware scan."""
+        target_ids = set(params.get("threat_ids", []))
+        all_threats = self.malware_scanner.detected_threats or await self.malware_scanner.scan()
+        selected = [
+            threat for threat in all_threats
+            if not target_ids or threat.id in target_ids
+        ]
+        results = self.malware_remover.remove_threats(selected)
+
+        removed_count = len([item for item in results if item.success])
+        for _ in range(removed_count):
+            self.telemetry.record_threat_removed()
+
+        return {
+            "selected": len(selected),
+            "removed": removed_count,
+            "results": [
+                {
+                    "threat_id": item.threat_id,
+                    "threat_name": item.threat_name,
+                    "success": item.success,
+                    "action": item.action,
+                    "message": item.message,
+                }
+                for item in results
+            ],
+        }
+
+    async def _handle_command_harden(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply explicit hardening to selected or all patchable vulnerabilities."""
+        vulnerabilities = await self.vuln_scanner.scan()
+        target_ids = set(params.get("vulnerability_ids", []))
+        selected = [
+            vuln for vuln in vulnerabilities
+            if vuln.is_patchable and (not target_ids or vuln.id in target_ids)
+        ]
+        results = self.hardener.harden_system(selected)
+        return {
+            "selected": len(selected),
+            "hardened": len([item for item in results if item.success]),
+            "failed": len([item for item in results if not item.success]),
+            "results": [
+                {
+                    "vulnerability_id": item.vulnerability_id,
+                    "action": item.action,
+                    "success": item.success,
+                    "message": item.message,
+                }
+                for item in results
+            ],
+        }
+
+    async def _handle_command_rollback(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Rollback the most recent reversible optimization."""
+        return self.tuner.rollback_last_optimization()
+
     def _serialize_profile(self, profile) -> Optional[Dict[str, Any]]:
         """Serialize the last known profile into status-safe shape."""
         if profile is None:
@@ -477,6 +579,13 @@ class BenevolentProtocol:
             "memory_usage": profile.memory_usage,
             "disk_usage": profile.disk_usage,
             "profile_timestamp": profile.profile_timestamp,
+        }
+
+    def _serialize_recommendation(self, recommendation) -> Dict[str, Any]:
+        """Serialize recommendation dataclasses from scanner modules."""
+        return {
+            key: value.value if hasattr(value, "value") else value
+            for key, value in vars(recommendation).items()
         }
 
 

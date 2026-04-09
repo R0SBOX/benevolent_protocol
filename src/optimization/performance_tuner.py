@@ -6,8 +6,9 @@ Safely optimizes system performance without harmful side effects
 import os
 import platform
 import subprocess
+from datetime import datetime
 import psutil
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 
 
@@ -38,6 +39,18 @@ class PlannedOptimization:
     platforms: List[str]
 
 
+@dataclass
+class AppliedOptimizationRecord:
+    """Tracks optimization execution and rollback state."""
+    task_id: str
+    task_name: str
+    applied_at: str
+    result: OptimizationResult
+    rolled_back: bool = False
+    rollback_attempted_at: Optional[str] = None
+    rollback_success: Optional[bool] = None
+
+
 class PerformanceOptimizer:
     """
     Safely optimizes system performance.
@@ -47,6 +60,7 @@ class PerformanceOptimizer:
     def __init__(self):
         self.optimizations_performed = []
         self.platform = platform.system().lower()
+        self.optimization_history: List[AppliedOptimizationRecord] = []
 
     async def create_optimization_plan(self, profile) -> List[PlannedOptimization]:
         """
@@ -123,6 +137,12 @@ class PerformanceOptimizer:
 
         if result.success:
             self.optimizations_performed.append(result)
+            self.optimization_history.append(AppliedOptimizationRecord(
+                task_id=task.id,
+                task_name=task.name,
+                applied_at=datetime.now().isoformat(),
+                result=result,
+            ))
 
         return result
 
@@ -362,6 +382,46 @@ class PerformanceOptimizer:
             return True
         except:
             return False
+
+    def rollback_last_optimization(self) -> Dict[str, Any]:
+        """Rollback the most recent reversible optimization."""
+        for record in reversed(self.optimization_history):
+            if record.rolled_back or not record.result.reversible:
+                continue
+
+            record.rollback_attempted_at = datetime.now().isoformat()
+            success = self.rollback_optimization(record.result)
+            record.rollback_success = success
+            record.rolled_back = success
+            return {
+                "success": success,
+                "task_name": record.task_name,
+                "task_id": record.task_id,
+                "rolled_back": success,
+            }
+
+        return {
+            "success": False,
+            "message": "No reversible optimization available for rollback",
+        }
+
+    def get_optimization_history(self) -> List[Dict[str, Any]]:
+        """Return optimization execution history in a status-safe shape."""
+        return [
+            {
+                "task_id": record.task_id,
+                "task_name": record.task_name,
+                "applied_at": record.applied_at,
+                "rolled_back": record.rolled_back,
+                "rollback_attempted_at": record.rollback_attempted_at,
+                "rollback_success": record.rollback_success,
+                "action": record.result.action,
+                "description": record.result.description,
+                "impact": record.result.impact,
+                "reversible": record.result.reversible,
+            }
+            for record in self.optimization_history
+        ]
 
 
 # Example usage
