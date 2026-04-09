@@ -92,7 +92,9 @@ class BenevolentProtocol:
             "heartbeat_interval": 60,
             "command_port": 9527,
             "optimization_interval": 3600,
+            "protection_scan_interval": 1800,
             "propagation_enabled": False,
+            "auto_remove_bloatware": False,
             "gaming_mode_auto_detect": True,
             "max_cpu_percent": 30,
             "max_memory_mb": 500,
@@ -370,7 +372,7 @@ class BenevolentProtocol:
                 results["blocked"].append(opt.name)
         
         # Windows-specific: Remove bloatware
-        if sys.platform == "win32":
+        if sys.platform == "win32" and self.config.get("auto_remove_bloatware", False):
             bloatware_results = await self.remove_bloatware()
             results["bloatware"] = bloatware_results
         
