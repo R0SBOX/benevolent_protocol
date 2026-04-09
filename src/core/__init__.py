@@ -8,6 +8,8 @@ for all benevolent protocol activities.
 
 import asyncio
 import logging
+import tempfile
+from pathlib import Path
 from typing import Optional, Dict, Any
 from datetime import datetime
 
@@ -34,8 +36,15 @@ class BenevolentProtocol:
         logger = logging.getLogger('benevolent_protocol')
         logger.setLevel(logging.INFO)
 
+        log_path = Path(tempfile.gettempdir()) / "benevolent_protocol.log"
+
+        # Reuse existing file handler if already configured.
+        for handler in logger.handlers:
+            if isinstance(handler, logging.FileHandler) and Path(handler.baseFilename) == log_path:
+                return logger
+
         # Create file handler
-        fh = logging.FileHandler('/tmp/benevolent_protocol.log')
+        fh = logging.FileHandler(log_path)
         fh.setLevel(logging.INFO)
 
         # Create formatter
