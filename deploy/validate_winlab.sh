@@ -47,8 +47,8 @@ echo "[3/4] Running Windows tool script..."
 "${ssh_base[@]}" \
   "${WINLAB_VENV_PATH}\\Scripts\\python.exe ${WINLAB_REPO_PATH}\\test_windows_tools.py"
 
-echo "[4/4] Running Windows control/integration pytest suite..."
+echo "[4/4] Running Windows control/integration/runtime pytest suite..."
 "${ssh_base[@]}" \
-  "${WINLAB_VENV_PATH}\\Scripts\\python.exe -m pytest ${WINLAB_REPO_PATH}\\tests\\test_control.py ${WINLAB_REPO_PATH}\\tests\\test_integration.py -q"
+  "${WINLAB_VENV_PATH}\\Scripts\\python.exe -m pytest ${WINLAB_REPO_PATH}\\tests\\test_control.py ${WINLAB_REPO_PATH}\\tests\\test_integration.py ${WINLAB_REPO_PATH}\\tests\\test_orchestrator_runtime.py -q"
 
 echo "Windows validation complete."

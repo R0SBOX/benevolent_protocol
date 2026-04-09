@@ -5,6 +5,7 @@ Ensures the protocol remains benevolent and safe
 
 import os
 import json
+import subprocess
 import psutil
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
@@ -126,30 +127,85 @@ class BehavioralConstraints:
         # Default: Safe action
         return RiskLevel.SAFE
 
+    def check_action_allowed(self, action: Any, context: Optional[Dict[str, Any]] = None) -> bool:
+        """
+        Compatibility helper for orchestrator/runtime code.
+        Accepts a string action name, a dict, or a planned-optimization object.
+        """
+        normalized_action, derived_context = self._normalize_action_context(action, context)
+        risk = self.check_action(normalized_action, derived_context)
+        return risk in (RiskLevel.SAFE, RiskLevel.LOW)
+
+    def _normalize_action_context(self, action: Any,
+                                  context: Optional[Dict[str, Any]] = None) -> tuple[str, Dict[str, Any]]:
+        """Normalize different action representations into a safety-check tuple."""
+        if isinstance(action, str):
+            normalized_action = action
+            derived_context = dict(context or {})
+        elif isinstance(action, dict):
+            normalized_action = (
+                action.get("action")
+                or action.get("name")
+                or "unknown_action"
+            )
+            derived_context = dict(action)
+        else:
+            normalized_action = getattr(action, "action", None) or getattr(action, "name", "unknown_action")
+            derived_context = {
+                "action": normalized_action,
+                "expected_cpu_percent": getattr(action, "expected_cpu_percent", None),
+                "expected_memory_mb": getattr(action, "expected_memory_mb", None),
+                "target_path": getattr(action, "target_path", None),
+                "requires_consent": getattr(action, "requires_consent", False),
+            }
+
+        derived_context.update(context or {})
+        if "action" not in derived_context:
+            derived_context["action"] = normalized_action
+        return normalized_action, derived_context
+
     def _check_resource_constraints(self, context: Dict[str, Any]) -> bool:
         """
         Ensure resource usage stays within benevolent limits.
         Protocol should never harm system performance.
         """
+        limits = self.get_resource_limits()
         current_cpu = psutil.cpu_percent(interval=0.1)
         current_memory = psutil.virtual_memory()
+        expected_cpu = context.get("expected_cpu_percent", 0) or 0
+        expected_memory_mb = context.get("expected_memory_mb", 0) or 0
 
         # Check if protocol would exceed CPU limits
-        if current_cpu > self.resource_limits["max_cpu_usage"]:
+        if current_cpu + expected_cpu > limits["max_cpu_usage"]:
             self._record_violation(
                 constraint="cpu_limit",
                 severity="high",
-                description=f"CPU usage {current_cpu}% exceeds limit {self.resource_limits['max_cpu_usage']}%",
+                description=(
+                    f"CPU usage {current_cpu}% plus planned {expected_cpu}% exceeds "
+                    f"limit {limits['max_cpu_usage']}%"
+                ),
                 action_blocked="resource_intensive_operation"
             )
             return False
 
         # Check memory availability
-        if current_memory.available < self.resource_limits["max_memory_mb"] * 1024 * 1024:
+        if expected_memory_mb > limits["max_memory_mb"]:
+            self._record_violation(
+                constraint="memory_budget",
+                severity="high",
+                description=(
+                    f"Planned memory budget {expected_memory_mb}MB exceeds "
+                    f"limit {limits['max_memory_mb']}MB"
+                ),
+                action_blocked="memory_intensive_operation"
+            )
+            return False
+
+        if current_memory.available < expected_memory_mb * 1024 * 1024:
             self._record_violation(
                 constraint="memory_limit",
                 severity="high",
-                description="Insufficient memory available",
+                description=f"Insufficient free memory for planned {expected_memory_mb}MB action",
                 action_blocked="memory_intensive_operation"
             )
             return False
@@ -196,6 +252,15 @@ class BehavioralConstraints:
                     action_blocked="all_operations"
                 )
                 return False
+
+        if context.get("requires_consent") and not self._has_explicit_user_consent():
+            self._record_violation(
+                constraint="explicit_consent_required",
+                severity="high",
+                description="Action requires explicit consent but no consent file was found",
+                action_blocked=context.get("action", "unknown")
+            )
+            return False
 
         return True
 
@@ -420,18 +485,27 @@ class BehavioralConstraints:
 
         # 1. Gaming mode (highest priority)
         if self.detect_gaming_mode():
+            self.current_mode = OperationMode.GAMING
             return "gaming"
 
         # 2. Idle mode (user away for 10+ minutes)
         if self._is_idle():
+            self.current_mode = OperationMode.IDLE
             return "idle"
 
         # 3. Stealth mode (low battery on laptop)
         if self._is_battery_saver():
+            self.current_mode = OperationMode.STEALTH
             return "stealth"
 
         # 4. Normal mode (default)
+        self.current_mode = OperationMode.NORMAL
         return "normal"
+
+    def refresh_mode(self) -> OperationMode:
+        """Update and return the current operation mode enum."""
+        self.get_current_mode()
+        return self.current_mode
 
     def _is_idle(self, duration_minutes: int = 10) -> bool:
         """Check if user has been idle for specified duration"""

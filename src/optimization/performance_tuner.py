@@ -4,6 +4,7 @@ Safely optimizes system performance without harmful side effects
 """
 
 import os
+import platform
 import subprocess
 import psutil
 from typing import List, Dict, Any
@@ -23,6 +24,20 @@ class OptimizationResult:
     rollback_command: str
 
 
+@dataclass
+class PlannedOptimization:
+    """A conservative optimization candidate derived from current system state."""
+    id: str
+    name: str
+    action: str
+    description: str
+    priority: str
+    expected_cpu_percent: int
+    expected_memory_mb: int
+    reversible: bool
+    platforms: List[str]
+
+
 class PerformanceOptimizer:
     """
     Safely optimizes system performance.
@@ -31,6 +46,93 @@ class PerformanceOptimizer:
 
     def __init__(self):
         self.optimizations_performed = []
+        self.platform = platform.system().lower()
+
+    async def create_optimization_plan(self, profile) -> List[PlannedOptimization]:
+        """
+        Create a conservative optimization plan based on measured system state.
+        The plan intentionally stays small and only includes locally-supported
+        actions that are cheap enough to safety-gate.
+        """
+        plan: List[PlannedOptimization] = []
+
+        if self.platform != "linux":
+            return plan
+
+        if profile.memory_usage >= 70 and os.path.exists('/proc/sys/vm/drop_caches'):
+            plan.append(PlannedOptimization(
+                id="memory-cache-clear",
+                name="memory_cache_clear",
+                action="memory_optimization",
+                description="Clear reclaimable Linux page caches when memory pressure is elevated.",
+                priority="high" if profile.memory_usage >= 85 else "medium",
+                expected_cpu_percent=5,
+                expected_memory_mb=64,
+                reversible=False,
+                platforms=["linux"]
+            ))
+
+        if profile.cpu_usage >= 60 and self._has_cpu_governor_control():
+            plan.append(PlannedOptimization(
+                id="cpu-governor-performance",
+                name="cpu_governor",
+                action="cpu_optimization",
+                description="Switch CPU governor to performance mode when sustained CPU pressure is observed.",
+                priority="medium",
+                expected_cpu_percent=3,
+                expected_memory_mb=16,
+                reversible=True,
+                platforms=["linux"]
+            ))
+
+        if profile.disk_usage >= 75 and os.path.exists('/sys/block'):
+            plan.append(PlannedOptimization(
+                id="disk-scheduler-tune",
+                name="disk_scheduler",
+                action="disk_optimization",
+                description="Tune Linux block scheduler for better responsiveness on busy disks.",
+                priority="medium",
+                expected_cpu_percent=3,
+                expected_memory_mb=16,
+                reversible=True,
+                platforms=["linux"]
+            ))
+
+        priority_rank = {"high": 0, "medium": 1, "low": 2}
+        return sorted(plan, key=lambda item: priority_rank.get(item.priority, 99))
+
+    async def apply_optimization(self, task: PlannedOptimization) -> OptimizationResult:
+        """Apply a planned optimization by action identifier."""
+        if task.name == "memory_cache_clear":
+            result = self.optimize_memory()
+        elif task.name == "cpu_governor":
+            result = self.optimize_cpu_governor()
+        elif task.name == "disk_scheduler":
+            result = self.optimize_disk_scheduler()
+        else:
+            result = OptimizationResult(
+                success=False,
+                action=task.name,
+                description=f"Unknown optimization task: {task.name}",
+                before_value=None,
+                after_value=None,
+                impact="neutral",
+                reversible=False,
+                rollback_command=""
+            )
+
+        if result.success:
+            self.optimizations_performed.append(result)
+
+        return result
+
+    def _has_cpu_governor_control(self) -> bool:
+        """Check if Linux CPU governor control paths exist."""
+        for i in range(psutil.cpu_count() or 0):
+            path = f"/sys/devices/system/cpu/cpu{i}/cpufreq/scaling_governor"
+            if os.path.exists(path):
+                return True
+        return False
 
     def optimize_memory(self) -> OptimizationResult:
         """
@@ -240,8 +342,6 @@ class PerformanceOptimizer:
 
         # Filter out failed optimizations
         successful = [opt for opt in optimizations if opt.success]
-
-        self.optimizations_performed.extend(successful)
 
         return successful
 

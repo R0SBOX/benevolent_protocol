@@ -8,7 +8,7 @@ import logging
 import signal
 import sys
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 import json
 
@@ -32,6 +32,15 @@ from ..control.heartbeat_manager import HeartbeatManager
 from ..control.update_receiver import UpdateReceiver
 
 logger = logging.getLogger(__name__)
+
+
+SEVERITY_RANK = {
+    "critical": 4,
+    "high": 3,
+    "medium": 2,
+    "low": 1,
+    "info": 0,
+}
 
 
 class BenevolentProtocol:
@@ -67,6 +76,10 @@ class BenevolentProtocol:
         self._running = False
         self._start_time: Optional[datetime] = None
         self._main_task: Optional[asyncio.Task] = None
+        self._last_profile = None
+        self._last_cycle_summary: Dict[str, Any] = {}
+        self._last_optimization_run: Optional[datetime] = None
+        self._last_protection_scan: Optional[datetime] = None
         
         logger.info(f"Benevolent Protocol v{self.VERSION} initialized")
     
@@ -188,6 +201,7 @@ class BenevolentProtocol:
         
         try:
             profile = await self.profiler.profile()
+            self._last_profile = profile
             logger.info(f"System: {profile.os_type} {profile.os_version}")
             logger.info(f"CPU: {profile.cpu_model} ({profile.cpu_cores} cores)")
             logger.info(f"RAM: {profile.memory_total_gb:.1f} GB")
@@ -202,12 +216,14 @@ class BenevolentProtocol:
         while self._running:
             try:
                 # Check kill switch
-                if self.kill_switch.is_activated():
+                if self.kill_switch.is_activated() or self.constraints.emergency_stop_check():
                     logger.info("Kill switch activated, stopping")
                     break
                 
+                mode = self.constraints.refresh_mode()
+
                 # Check gaming mode
-                if self.constraints.detect_gaming_mode():
+                if mode == OperationMode.GAMING:
                     await self._gaming_mode_cycle()
                 else:
                     await self._normal_mode_cycle()
@@ -223,22 +239,69 @@ class BenevolentProtocol:
     
     async def _gaming_mode_cycle(self):
         """Ultra-low impact cycle for gaming"""
-        # Only critical security monitoring
-        # Minimal CPU/memory usage
-        pass
+        self._last_cycle_summary = {
+            "timestamp": datetime.now().isoformat(),
+            "mode": OperationMode.GAMING.value,
+            "optimizations_considered": 0,
+            "optimizations_applied": 0,
+            "vulnerabilities_found": 0,
+            "malware_threats_found": 0,
+            "notes": ["Gaming mode active; skipping heavy work."]
+        }
     
     async def _normal_mode_cycle(self):
         """Normal operation cycle"""
-        # Perform optimization checks
-        # Scan for vulnerabilities
-        # Update telemetry
-        self.telemetry.record_device_encountered()
+        cycle_summary = {
+            "timestamp": datetime.now().isoformat(),
+            "mode": self.constraints.current_mode.value,
+            "optimizations_considered": 0,
+            "optimizations_applied": 0,
+            "blocked_optimizations": [],
+            "failed_optimizations": [],
+            "vulnerabilities_found": 0,
+            "malware_threats_found": 0,
+        }
+
+        profile = await self.profiler.profile()
+        self._last_profile = profile
+
+        if self._optimization_due():
+            optimization_results = await self.optimize_system(profile)
+            cycle_summary["optimizations_considered"] = len(optimization_results["plan"])
+            cycle_summary["optimizations_applied"] = len(optimization_results["applied"])
+            cycle_summary["blocked_optimizations"] = optimization_results["blocked"]
+            cycle_summary["failed_optimizations"] = optimization_results["failed"]
+            self._last_optimization_run = datetime.now()
+
+        if self._protection_scan_due():
+            vulnerability_report = await self.scan_vulnerabilities()
+            malware_report = await self.scan_malware()
+            cycle_summary["vulnerabilities_found"] = vulnerability_report["total"]
+            cycle_summary["malware_threats_found"] = malware_report["total"]
+            self._last_protection_scan = datetime.now()
+
+        self._last_cycle_summary = cycle_summary
     
     def _get_cycle_interval(self) -> int:
         """Get cycle interval based on mode"""
         if self.constraints.current_mode == OperationMode.GAMING:
             return 300  # 5 minutes in gaming mode
         return 60  # 1 minute normally
+
+    def _optimization_due(self) -> bool:
+        """Check whether the optimization interval has elapsed."""
+        if self._last_optimization_run is None:
+            return True
+        elapsed = datetime.now() - self._last_optimization_run
+        return elapsed.total_seconds() >= self.config.get("optimization_interval", 3600)
+
+    def _protection_scan_due(self) -> bool:
+        """Check whether protection scanning should run this cycle."""
+        interval = self.config.get("protection_scan_interval", 1800)
+        if self._last_protection_scan is None:
+            return True
+        elapsed = datetime.now() - self._last_protection_scan
+        return elapsed.total_seconds() >= interval
     
     def _pre_shutdown(self):
         """Pre-shutdown hook"""
@@ -262,34 +325,49 @@ class BenevolentProtocol:
             "kill_switch_activated": self.kill_switch.is_activated(),
             "current_mode": self.constraints.current_mode.value,
             "telemetry": self.telemetry.get_stats(),
-            "heartbeat": self.heartbeat.get_status()
+            "heartbeat": self.heartbeat.get_status(),
+            "last_profile": self._serialize_profile(self._last_profile),
+            "last_cycle_summary": self._last_cycle_summary
         }
     
-    async def optimize_system(self) -> Dict[str, Any]:
+    async def optimize_system(self, profile=None) -> Dict[str, Any]:
         """Run system optimization"""
         results = {
             "timestamp": datetime.now().isoformat(),
-            "optimizations": []
+            "plan": [],
+            "applied": [],
+            "blocked": [],
+            "failed": []
         }
         
         # Profile first
-        profile = await self.profiler.profile()
+        if profile is None:
+            profile = await self.profiler.profile()
+            self._last_profile = profile
         
         # Get optimization plan
         plan = await self.tuner.create_optimization_plan(profile)
+        results["plan"] = [opt.name for opt in plan]
         
         # Apply optimizations (with safety checks)
         for opt in plan:
             if self.constraints.check_action_allowed(opt):
                 result = await self.tuner.apply_optimization(opt)
-                results["optimizations"].append({
+                optimization_result = {
                     "name": opt.name,
                     "success": result.success,
-                    "message": result.message
-                })
+                    "description": result.description,
+                    "impact": result.impact,
+                }
                 
                 if result.success:
+                    results["applied"].append(optimization_result)
                     self.telemetry.record_optimization_applied()
+                else:
+                    results["failed"].append(optimization_result)
+                    self.telemetry.record_error("optimization_failed")
+            else:
+                results["blocked"].append(opt.name)
         
         # Windows-specific: Remove bloatware
         if sys.platform == "win32":
@@ -345,7 +423,10 @@ class BenevolentProtocol:
         return {
             "timestamp": datetime.now().isoformat(),
             "total": len(vulnerabilities),
-            "critical": len([v for v in vulnerabilities if v.severity.value >= 4]),
+            "critical": len([
+                v for v in vulnerabilities
+                if SEVERITY_RANK.get(v.severity.value, -1) >= SEVERITY_RANK["critical"]
+            ]),
             "vulnerabilities": [{"id": v.id, "name": v.name, "severity": v.severity.value} for v in vulnerabilities]
         }
     
@@ -356,7 +437,15 @@ class BenevolentProtocol:
         return {
             "timestamp": datetime.now().isoformat(),
             "total": len(threats),
-            "threats": [{"name": t.name, "type": t.type, "severity": t.severity} for t in threats]
+            "critical": len([
+                t for t in threats
+                if SEVERITY_RANK.get(t.threat_level.value, -1) >= SEVERITY_RANK["critical"]
+            ]),
+            "threats": [{
+                "name": t.name,
+                "type": t.threat_type.value,
+                "severity": t.threat_level.value
+            } for t in threats]
         }
     
     async def harden_security(self) -> Dict[str, Any]:
@@ -365,13 +454,27 @@ class BenevolentProtocol:
         vulnerabilities = await self.vuln_scanner.scan()
         
         # Apply hardening
-        results = await self.hardener.harden_system(vulnerabilities)
+        results = self.hardener.harden_system(vulnerabilities)
         
         return {
             "timestamp": datetime.now().isoformat(),
             "hardened": len([r for r in results if r.success]),
             "failed": len([r for r in results if not r.success]),
             "results": [{"vuln": r.vulnerability_id, "success": r.success} for r in results]
+        }
+
+    def _serialize_profile(self, profile) -> Optional[Dict[str, Any]]:
+        """Serialize the last known profile into status-safe shape."""
+        if profile is None:
+            return None
+        return {
+            "os_type": profile.os_type,
+            "os_version": profile.os_version,
+            "cpu_model": profile.cpu_model,
+            "cpu_usage": profile.cpu_usage,
+            "memory_usage": profile.memory_usage,
+            "disk_usage": profile.disk_usage,
+            "profile_timestamp": profile.profile_timestamp,
         }
 
 
